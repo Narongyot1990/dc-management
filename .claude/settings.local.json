@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd /c \"dir /s /a \"\"C:\\\\Users\\\\Narongyot.B\\\\projects\\\\webApp\\\\ITL\\\\WN\\\\operations\\\\dc-management\\\\node_modules\"\" 2>nul | findstr \"\"Total Files\\\\|Total File\\\\|bytes\"\"\")",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

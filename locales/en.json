@@ -112,6 +112,8 @@
   "pickup_date": "Loading Date",
   "pickup_time": "Scheduled Time",
   "add_destination": "Add Truck",
+  "plan_mode_single": "Fill Form",
+  "plan_mode_batch": "Copy Paste",
   "save_booking": "Save Plan",
   "booking_saved": "Plan saved successfully",
   "booking_deleted": "Plan deleted successfully",

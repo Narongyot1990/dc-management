@@ -49,7 +49,8 @@ type BookingStatus = 'waiting' | 'loading' | 'enroute' | 'completed';
 function getBookingStatus(b: IShipmentBooking): BookingStatus {
   if (b.status === 'fulfilled') return 'completed';
   if (b.loading_end) return 'enroute';
-  if (b.loading_start) return 'loading';
+  // Only show 'loading' if both loading_start AND dock_number are set
+  if (b.loading_start && b.dock_number) return 'loading';
   return 'waiting';
 }
 
@@ -313,7 +314,7 @@ export default function MonitorPage() {
                             status === 'loading' ? 'bg-amber-100 text-amber-700' :
                             'bg-gray-100 text-gray-600'
                           }`}>
-                            {status === 'enroute' ? t('on_route') : status === 'loading' ? t('in_progress') : t('waiting')}
+                            {status === 'enroute' ? t('on_route') : status === 'loading' ? t('in_progress') : 'รอโหลดสินค้า'}
                           </span>
                         )}
                       </td>

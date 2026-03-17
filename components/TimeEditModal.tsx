@@ -14,7 +14,7 @@ function nowStr(): string {
   return `${dd}/${mm}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** "dd/mm/yyyy H:mm" → "HH:mm" (for <input type="time">) */
+/** "dd/mm/yyyy H:mm" → "HH:mm" */
 function toInputTime(ts: string): string {
   const timePart = ts.split(' ')[1] || '';
   const [h, m] = timePart.split(':');
@@ -22,11 +22,41 @@ function toInputTime(ts: string): string {
   return `${String(+h).padStart(2, '0')}:${m}`;
 }
 
-/** datePart "dd/mm/yyyy" + input "HH:mm" → "dd/mm/yyyy H:mm" */
-function fromInputTime(datePart: string, inputTime: string): string {
-  const [h, m] = inputTime.split(':');
-  return `${datePart} ${+h}:${m}`;
+/** Validate and format time input */
+function formatTimeInput(input: string): string {
+  const match = input.trim().match(/^(\d{1,2}):(\d{0,2})$/);
+  if (!match) return input;
+  
+  const hours = parseInt(match[1], 10);
+  const minutes = match[2] || '';
+  
+  // Auto-format: if hours > 23, limit to 23
+  const validHours = Math.min(hours, 23);
+  
+  // Auto-complete minutes if single digit
+  const validMinutes = minutes.length === 1 ? `${minutes}0` : minutes;
+  
+  return `${validHours}:${validMinutes}`;
 }
+
+/** datePart + "HH:mm" → "dd/mm/yyyy H:mm" with validation */
+function fromInputTime(datePart: string, inputTime: string): string {
+  // Parse 24-hour format (13:00, 23:30, 9:00, 06:00, 6:00)
+  const match = inputTime.trim().match(/^(\d{1,2}):(\d{1,2})$/);
+  if (!match) return '';
+  
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  
+  // Validate: hours 0-23, minutes 0-59
+  if (hours > 23 || minutes > 59) return '';
+  
+  // Pad minutes to 2 digits
+  const paddedMinutes = String(minutes).padStart(2, '0');
+  
+  return `${datePart} ${hours}:${paddedMinutes}`;
+}
+
 
 /** "dd/mm/yyyy H:mm" → date part */
 function datePart(ts: string): string {
@@ -91,6 +121,10 @@ export default function TimeEditModal({ bookingId, onClose }: Props) {
   const [flash, setFlash]         = useState<string | null>(null);
   const wasUpdated                = useRef(false);
   const flashTimer                = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [editingField, setEditingField] = useState<TimeField | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [editingDate, setEditingDate] = useState<TimeField | null>(null);
+  const [editDateValue, setEditDateValue] = useState('');
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   const fetchBooking = useCallback(async (id: string) => {
@@ -149,22 +183,68 @@ export default function TimeEditModal({ bookingId, onClose }: Props) {
     saveField(field, ts);
   }
 
-  // ── time input change ────────────────────────────────────────────────────
-  function handleTimeChange(field: TimeField, inputVal: string) {
-    if (!booking || !booking[field] || !inputVal) return;
-    const newTs = fromInputTime(datePart(booking[field]), inputVal);
-    setBooking((p) => p ? { ...p, [field]: newTs } : p);
-    saveField(field, newTs);
+  // ── Edit/Save handlers ───────────────────────────────────────────────────
+  function handleEdit(field: TimeField) {
+    const currentValue = booking?.[field] || '';
+    const timePart = currentValue.split(' ')[1] || '';
+    setEditValue(timePart);
+    setEditingField(field);
   }
 
-  // ── date input change ────────────────────────────────────────────────────
-  function handleDateChange(field: TimeField, dateInput: string) {
-    if (!booking || !booking[field] || !dateInput) return;
-    const [yyyy, mm, dd] = dateInput.split('-');
-    const timePart = booking[field].split(' ')[1] || '0:00';
-    const newTs = `${dd}/${mm}/${yyyy} ${timePart}`;
-    setBooking((p) => p ? { ...p, [field]: newTs } : p);
-    saveField(field, newTs);
+  function handleSaveEdit(field: TimeField) {
+    if (!booking) return;
+    const datePart = booking[field]?.split(' ')[0] || nowStr().split(' ')[0];
+    
+    // Parse flexible time formats
+    let hours = 0;
+    let minutes = 0;
+    const cleaned = editValue.replace(/[^\d:]/g, '');
+    
+    if (cleaned.includes(':')) {
+      const [h, m] = cleaned.split(':');
+      hours = parseInt(h || '0', 10);
+      minutes = parseInt(m || '0', 10);
+    } else if (cleaned.length >= 3) {
+      hours = parseInt(cleaned.slice(0, -2), 10);
+      minutes = parseInt(cleaned.slice(-2), 10);
+    } else {
+      hours = parseInt(cleaned || '0', 10);
+    }
+    
+    hours = Math.max(0, Math.min(23, hours));
+    minutes = Math.max(0, Math.min(59, minutes));
+    
+    const formatted = `${datePart} ${hours}:${String(minutes).padStart(2, '0')}`;
+    saveField(field, formatted);
+    setEditingField(null);
+    setEditValue('');
+  }
+
+  function handleCancelEdit() {
+    setEditingField(null);
+    setEditValue('');
+  }
+
+  function handleEditDate(field: TimeField) {
+    const currentValue = booking?.[field] || '';
+    const datePart = currentValue.split(' ')[0] || '';
+    setEditDateValue(toInputDate(datePart));
+    setEditingDate(field);
+  }
+
+  function handleSaveDate(field: TimeField) {
+    if (!booking) return;
+    const timePart = booking[field]?.split(' ')[1] || '0:00';
+    const [yyyy, mm, dd] = editDateValue.split('-');
+    const formatted = `${dd}/${mm}/${yyyy} ${timePart}`;
+    saveField(field, formatted);
+    setEditingDate(null);
+    setEditDateValue('');
+  }
+
+  function handleCancelDateEdit() {
+    setEditingDate(null);
+    setEditDateValue('');
   }
 
   if (!bookingId) return null;
@@ -283,53 +363,93 @@ export default function TimeEditModal({ bookingId, onClose }: Props) {
                         </svg>
                         {isSaving ? '...' : t('stamp_now')}
                       </button>
-                    ) : (
-                      /* ── Has value: full datetime + time input ─ */
+                    ) : editingField === key ? (
+                      /* ── Editing time ─ */
                       <div className="space-y-2">
-                        {/* Full datetime display */}
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(key); if (e.key === 'Escape') handleCancelEdit(); }}
+                          placeholder="เช่น 13:00, 1330, 13"
+                          autoFocus
+                          className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-mono font-medium text-gray-800 focus:outline-none focus:ring-2 ${ac.ring} ${ac.border}`}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveEdit(key)}
+                            disabled={isSaving}
+                            className={`flex-1 rounded-xl py-2 text-sm font-bold transition-all disabled:opacity-50 ${ac.bg} ${ac.text}`}
+                          >
+                            {isSaving ? '...' : '✓ บันทึก'}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            disabled={isSaving}
+                            className="flex-1 rounded-xl py-2 text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all disabled:opacity-50"
+                          >
+                            ยกเลิก
+                          </button>
+                        </div>
+                      </div>
+                    ) : editingDate === key ? (
+                      /* ── Editing date ─ */
+                      <div className="space-y-2">
+                        <input
+                          type="date"
+                          value={editDateValue}
+                          onChange={(e) => setEditDateValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveDate(key); if (e.key === 'Escape') handleCancelDateEdit(); }}
+                          autoFocus
+                          className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-mono font-medium text-gray-800 focus:outline-none focus:ring-2 ${ac.ring} ${ac.border}`}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSaveDate(key)}
+                            disabled={isSaving}
+                            className={`flex-1 rounded-xl py-2 text-sm font-bold transition-all disabled:opacity-50 ${ac.bg} ${ac.text}`}
+                          >
+                            {isSaving ? '...' : '✓ บันทึก'}
+                          </button>
+                          <button
+                            onClick={handleCancelDateEdit}
+                            disabled={isSaving}
+                            className="flex-1 rounded-xl py-2 text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all disabled:opacity-50"
+                          >
+                            ยกเลิก
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── Display mode with Edit buttons ─ */
+                      <div className="space-y-2">
                         <div className={`text-2xl font-bold font-mono tabular-nums ${ac.text}`}>
                           {val.split(' ')[1] || val}
                         </div>
                         <div className="text-[11px] text-gray-400 -mt-1">{val.split(' ')[0]}</div>
-
-                        {/* Date + Time input row */}
-                        <div className="flex items-center gap-2 pt-1">
-                          <input
-                            type="date"
-                            value={toInputDate(val)}
-                            onChange={(e) => handleDateChange(key, e.target.value)}
-                            disabled={isSaving}
-                            className={`flex-1 rounded-xl border bg-white px-3 py-2.5 text-sm font-mono font-medium text-gray-800
-                              focus:outline-none focus:ring-2 ${ac.ring} transition-all disabled:opacity-50
-                              ${ac.border}`}
-                          />
-                          <input
-                            type="time"
-                            value={inputVal}
-                            onChange={(e) => handleTimeChange(key, e.target.value)}
-                            disabled={isSaving}
-                            className={`rounded-xl border bg-white px-3 py-2.5 text-sm font-mono font-medium text-gray-800
-                              focus:outline-none focus:ring-2 ${ac.ring} transition-all disabled:opacity-50
-                              ${ac.border}`}
-                            style={{ width: '7.5rem' }}
-                          />
-                          {/* Re-stamp button */}
+                        
+                        <div className="flex gap-2 pt-1">
                           <button
-                            onClick={() => handleStamp(key)}
+                            onClick={() => handleEdit(key)}
                             disabled={isSaving}
-                            className="shrink-0 px-3 py-2.5 rounded-xl bg-white border border-gray-200 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 flex items-center gap-1"
-                            title="บันทึกเวลาตอนนี้ใหม่"
+                            className={`flex-1 rounded-xl py-2 text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${ac.bg} ${ac.text}`}
                           >
-                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            ตอนนี้
+                            แก้เวลา
+                          </button>
+                          <button
+                            onClick={() => handleEditDate(key)}
+                            disabled={isSaving}
+                            className={`flex-1 rounded-xl py-2 text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${ac.bg} ${ac.text}`}
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            แก้วันที่
                           </button>
                         </div>
-                        {/* Saving indicator */}
-                        {isSaving && (
-                          <div className="text-[10px] text-gray-400 text-right">กำลังบันทึก...</div>
-                        )}
                       </div>
                     )}
                   </div>

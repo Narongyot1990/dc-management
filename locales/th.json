@@ -112,6 +112,8 @@
   "pickup_date": "วันที่โหลด",
   "pickup_time": "เวลานัดโหลด",
   "add_destination": "เพิ่มรถ",
+  "plan_mode_single": "กรอกทีละอัน",
+  "plan_mode_batch": "คัดลอกวาง",
   "save_booking": "บันทึกแผน",
   "booking_saved": "บันทึกแผนสำเร็จ",
   "booking_deleted": "ลบแผนสำเร็จ",

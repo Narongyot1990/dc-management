@@ -198,7 +198,7 @@ export default function PlanPage() {
                 mode === 'form' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Form
+              {t('plan_mode_single')}
             </button>
             <button
               onClick={() => setMode('paste')}
@@ -206,7 +206,7 @@ export default function PlanPage() {
                 mode === 'paste' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Paste
+              {t('plan_mode_batch')}
             </button>
           </div>
         </div>
@@ -277,12 +277,12 @@ export default function PlanPage() {
           <>
             <div className="mb-2">
               <div className="text-xs text-gray-500 mb-2 bg-gray-50 rounded-lg px-3 py-2">
-                Copy จาก Excel แล้ว Paste ที่นี่ (คอลัมน์: <strong>รหัสสาขา</strong> [Tab] <strong>ทะเบียนรถ</strong>)
+                Copy จาก Excel แล้ว Paste ที่นี่ (คอลัมน์: <strong>รหัสสาขา</strong> [Tab] <strong>เวลาโหลด</strong> [Tab] <strong>ทะเบียนรถ</strong>)
               </div>
               <textarea
                 value={pasteText}
                 onChange={(e) => setPasteText(e.target.value)}
-                placeholder={"NIN\t700-2131\nSMP\t700-3312\nUDN\t700-5463"}
+                placeholder={"NIN\t09:00\t700-2131\nSMP\t09:30\t700-3312\nUDN\t10:00\t700-5463"}
                 rows={5}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono resize-y"
               />

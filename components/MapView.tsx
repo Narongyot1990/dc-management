@@ -44,7 +44,8 @@ type BookingStatus = 'waiting' | 'loading' | 'enroute' | 'done';
 function getBookingStatus(b: IShipmentBooking): BookingStatus {
   if (b.status === 'fulfilled') return 'done';
   if (b.loading_end) return 'enroute';
-  if (b.loading_start) return 'loading';
+  // Only show 'loading' if both loading_start AND dock_number are set
+  if (b.loading_start && b.dock_number) return 'loading';
   return 'waiting';
 }
 
