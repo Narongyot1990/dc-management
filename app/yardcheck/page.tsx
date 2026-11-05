@@ -1,7 +1,8 @@
 "use client";
 
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { YardCheck, YardCheckType, YardCheckSize, YardCheckChecklistItem } from '@/types';
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
 import { YARD_SIZES, YARD_CHECKLIST, YARD_NAME } from '@/utils/constants';
@@ -32,7 +33,16 @@ const initialFormData = {
 const emptyChecklist: YardCheckChecklistItem[] = [1, 2, 3, 4, 5].map((item) => ({ item: item as 1 | 2 | 3 | 4 | 5, result: null }));
 
 export default function YardCheckPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-[calc(100vh-80px)]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600" /></div>}>
+      <YardCheckForm />
+    </Suspense>
+  );
+}
+
+function YardCheckForm() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<PageMode>('update');
   const [type, setType] = useState<YardCheckType | ''>('');
   const [formData, setFormData] = useState(initialFormData);
@@ -177,11 +187,19 @@ export default function YardCheckPage() {
   };
 
   // ---------- Continue checklist from update mode ----------
-  const startInspecting = (record: YardCheck) => {
+  const startInspecting = useCallback((record: YardCheck) => {
     setInspecting(record);
     setChecklist(record.checklist && record.checklist.length === 5 ? record.checklist : emptyChecklist);
     setNgDetail(record.ng_detail || '');
-  };
+  }, []);
+
+  // Auto-open checklist when arriving via ?inspect=<id> (e.g. from summary's Inspect/Re-inspect button)
+  useEffect(() => {
+    const inspectId = searchParams.get('inspect');
+    if (!inspectId || !cacheReady) return;
+    const record = cacheRef.current.find((c) => c.id === inspectId);
+    if (record) startInspecting(record);
+  }, [searchParams, cacheReady, startInspecting]);
 
   const setResult = (item: number, result: 'pass' | 'fail') => {
     setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, result } : c)));

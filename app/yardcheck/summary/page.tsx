@@ -136,6 +136,14 @@ export default function YardCheckSummaryPage() {
             {c.type === 'chassis' && <span className="text-gray-400">{t('yc_no_container')}</span>}
           </div>
         </div>
+        {hasNg && (
+          <div className="px-3 pb-1.5 -mt-1">
+            <p className="text-[11px] text-red-700 font-medium">
+              ⚠ {t('yc_checklist_title')} {(c.checklist || []).filter((i) => i.result === 'fail').map((i) => i.item).join(', ')}
+            </p>
+            {c.ng_detail && <p className="text-[10px] text-red-500 mt-0.5 line-clamp-2">{c.ng_detail}</p>}
+          </div>
+        )}
         <div className={`px-3 py-1.5 flex items-center justify-between gap-2 ${
           hasNg ? 'bg-red-100' : pending ? 'bg-red-50' : c.type === 'empty' ? 'bg-emerald-50' : 'bg-gray-50'
         }`}>
@@ -148,7 +156,7 @@ export default function YardCheckSummaryPage() {
             {getRelativeTime(c.checked_at, true)}
           </span>
           {pending ? (
-            <a href="/yardcheck">
+            <a href={`/yardcheck?inspect=${c.id}`}>
               <button className="shrink-0 text-[10px] px-2.5 py-1 rounded-md bg-amber-500 text-white font-medium">
                 {hasNg ? t('yc_reinspect') : t('yc_inspect')}
               </button>
