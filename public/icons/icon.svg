@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#2563eb"/>
+  <!-- Container icon -->
+  <g transform="translate(96, 120)" fill="none" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Container body -->
+    <rect x="20" y="80" width="280" height="180" rx="8" fill="none"/>
+    <!-- Container ridges -->
+    <line x1="90" y1="80" x2="90" y2="260"/>
+    <line x1="160" y1="80" x2="160" y2="260"/>
+    <line x1="230" y1="80" x2="230" y2="260"/>
+    <!-- Top handle/connector -->
+    <path d="M120 80 L120 50 L200 50 L200 80"/>
+  </g>
+</svg>

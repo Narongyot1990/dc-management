@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - Dock Management</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      color: #1f2937;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fef3c7;
+      color: #92400e;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      background: #f59e0b;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .retry-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .retry-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+    }
+    .retry-btn:active {
+      transform: translateY(0);
+    }
+    .cached-info {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .cached-info p {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+    .cached-link {
+      display: inline-block;
+      color: #2563eb;
+      text-decoration: none;
+      padding: 8px 16px;
+      border: 1px solid #2563eb;
+      border-radius: 8px;
+      margin: 5px;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .cached-link:hover {
+      background: #2563eb;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>ไม่มีสัญญาณ</h1>
+    <p>ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้<br>กรุณาตรวจสอบสัญญาณและลองใหม่</p>
+
+    <div class="status">
+      <span class="dot"></span>
+      <span>Offline Mode</span>
+    </div>
+
+    <br><br>
+
+    <button class="retry-btn" onclick="location.reload()">
+      🔄 ลองใหม่
+    </button>
+
+    <div class="cached-info">
+      <p>หรือดูข้อมูลที่บันทึกไว้:</p>
+      <a href="/" class="cached-link">🏠 หน้าหลัก</a>
+      <a href="/driver" class="cached-link">🚛 Driver</a>
+      <a href="/planner" class="cached-link">📋 Planner</a>
+    </div>
+  </div>
+
+  <script>
+    // Auto-reload when back online
+    window.addEventListener('online', () => {
+      location.reload();
+    });
+  </script>
+</body>
+</html>
