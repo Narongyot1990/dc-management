@@ -112,6 +112,7 @@ export const API_ENDPOINTS = {
   BOOKING_SCAN: '/api/booking-scan',
   OCR: '/api/ocr',
   CONTAINER_CHECK: '/api/container-check',
+  YARD_CHECK: '/api/yard-check',
 } as const;
 
 /**
@@ -122,6 +123,52 @@ export const STORAGE_KEYS = {
   USER_ID: 'user_id',
   THEME: 'app_theme',
 } as const;
+
+/**
+ * Yard Check: yard name, container sizes, types
+ */
+export const YARD_NAME = 'YZZ';
+
+export const YARD_SIZES = ['20GP', '40GP', '40HC'] as const;
+
+export const YARD_TYPES = ['empty', 'laden', 'chassis'] as const;
+
+/**
+ * Yard Check: 5-item empty-container inspection checklist
+ * Source: FLS-TRN-WI-CII-001 (Container Inspection YZZ)
+ */
+export const YARD_CHECKLIST: { item: 1 | 2 | 3 | 4 | 5; labelKey: string; descKey: string; ngKey: string }[] = [
+  { item: 1, labelKey: 'yc_checklist_item_1', descKey: 'yc_checklist_item_1_desc', ngKey: 'yc_checklist_item_1_ng' },
+  { item: 2, labelKey: 'yc_checklist_item_2', descKey: 'yc_checklist_item_2_desc', ngKey: 'yc_checklist_item_2_ng' },
+  { item: 3, labelKey: 'yc_checklist_item_3', descKey: 'yc_checklist_item_3_desc', ngKey: 'yc_checklist_item_3_ng' },
+  { item: 4, labelKey: 'yc_checklist_item_4', descKey: 'yc_checklist_item_4_desc', ngKey: 'yc_checklist_item_4_ng' },
+  { item: 5, labelKey: 'yc_checklist_item_5', descKey: 'yc_checklist_item_5_desc', ngKey: 'yc_checklist_item_5_ng' },
+];
+
+/**
+ * Yard Check: type colors (badge bg/text)
+ */
+export const YARD_TYPE_COLORS: Record<string, string> = {
+  empty: 'bg-amber-100 text-amber-800',
+  laden: 'bg-blue-100 text-blue-800',
+  chassis: 'bg-violet-100 text-violet-800',
+};
+
+/**
+ * Yard Check: yard status colors
+ */
+export const YARD_STATUS_COLORS: Record<string, string> = {
+  in: 'bg-emerald-500 text-white',
+  out: 'bg-gray-400 text-white',
+};
+
+/**
+ * Yard Check: inspection status colors
+ */
+export const YARD_INSPECTION_COLORS: Record<string, string> = {
+  pending: 'bg-red-100 text-red-700',
+  passed: 'bg-emerald-100 text-emerald-700',
+};
 
 /**
  * Default values

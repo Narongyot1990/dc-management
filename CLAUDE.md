@@ -26,6 +26,9 @@ app/
   containercheck/
     page.tsx                    # Container check form ~500 lines
     summary/page.tsx            # Summary list with filters ~500 lines
+  yardcheck/
+    page.tsx                    # Yard check form: type select (empty/laden/chassis) + 5-item checklist for empty
+    summary/page.tsx            # In Yard / Out Today split summary with stat cards
   guides/
     import/page.tsx             # Import driver guide (7 steps)
   api/
@@ -36,6 +39,7 @@ app/
     bookings/route.ts           # GET + POST bookings
     bookings/[id]/route.ts      # GET + PUT + DELETE single booking
     container-check/route.ts    # GET + POST + PUT + DELETE checks
+    yard-check/route.ts         # GET + POST (always new) + PUT (checklist/mark OUT) + DELETE
     booking-scan/route.ts       # QR scan → booking data
     ocr/route.ts                # Image → text (Google AI)
 
@@ -65,6 +69,7 @@ hooks/
   useJobs.ts                    # Jobs data + polling + newJobIds + onNewJobs callback
   useBookings.ts                # Bookings data management
   useContainerChecks.ts         # CC data + visibility refetch + markDeparted + deleteCheck
+  useYardChecks.ts              # Yard check data + visibility refetch + markOut + updateChecklist + deleteCheck
   useDockOccupancy.ts           # Dock status tracking
   usePusher.ts                  # useJobEvents, useBookingEvents, useDockEvents
   useOffline.ts                 # PWA offline detection
@@ -83,18 +88,19 @@ lib/
     Job.ts                      # IJob + Mongoose schema
     Booking.ts                  # IBooking + Mongoose schema
     ContainerCheck.ts           # IContainerCheck + schema (history[], remark)
+    YardCheck.ts                # IYardCheck + schema (type, yard_status, inspection_status, checklist[])
     Dock.ts                     # DockInfo interface
     User.ts                     # User interface
 
 utils/
-  constants.ts                  # DOCKS (D-01~D-25,F2), CC_VENDORS, POLLING_INTERVALS, STATUS_COLORS, VENDOR_COLORS, CC_STATUS_COLORS, API_ENDPOINTS, DEFAULTS
+  constants.ts                  # DOCKS (D-01~D-25,F2), CC_VENDORS, POLLING_INTERVALS, STATUS_COLORS, VENDOR_COLORS, CC_STATUS_COLORS, YARD_NAME, YARD_SIZES, YARD_CHECKLIST, YARD_TYPE_COLORS, YARD_STATUS_COLORS, YARD_INSPECTION_COLORS, API_ENDPOINTS, DEFAULTS
   format.ts                     # getBangkokDateString, formatDateTimeTH, formatDateTimeFullTH, formatTimeTH, calculateDuration, getRelativeTime(date,compact?), formatDateTime, formatDate, formatTime
-  styles.ts                     # getVendorColor, getCCStatusColor, getBookingStatusColor, getJobStatusColor, cn(), getButtonClasses, getInputClasses
+  styles.ts                     # getVendorColor, getCCStatusColor, getYardTypeColor, getYardStatusColor, getYardInspectionColor, getBookingStatusColor, getJobStatusColor, cn(), getButtonClasses, getInputClasses
   stats.ts                      # countByStatus<T>(items, statusKeys)
   index.ts                      # Barrel export
 
 types/
-  index.ts                      # All TS interfaces: Job, Booking, ContainerCheck, DockInfo, User, form data types, ApiResponse<T>, status unions
+  index.ts                      # All TS interfaces: Job, Booking, ContainerCheck, YardCheck, DockInfo, User, form data types, ApiResponse<T>, status unions
 
 config/
   app.config.ts                 # enableOfflineMode flag
@@ -105,6 +111,7 @@ locales/
 public/
   manifest.json, sw.js, offline.html    # PWA assets
   images/guides/                        # Guide page images
+  images/yardcheck/                     # Empty-container checklist reference illustrations (item1-5.png)
   icons/                                # App icons
 ```
 
@@ -118,6 +125,9 @@ public/
 
 ### ContainerCheck
 `id` | `container_no` | `vendor` (FLS/TMC/NNR/U-Globe/Other) | `location` (yard/dock) | `dock_no?` | `status` (pending/loading/loaded/departed) | `checked_at` | `remark?` | `history[]` ({action, at, changes?})
+
+### YardCheck
+`id` (auto YC001...) | `type` (empty/laden/chassis) | `container_no?` (empty/laden) | `size?` (20GP/40GP/40HC, empty/laden) | `chassis_plate` | `seal_no?` (laden) | `yard` (default YZZ) | `yard_status` (in/out) | `inspection_status?` (pending/passed, empty only) | `checklist?[]` ({item: 1-5, result: pass/fail/null}) | `ng_detail?` | `checked_at` | `remark?` | `history[]`. Every yard visit always creates a **new** record (no upsert) — lookup for "continue checklist" matches `container_no` (empty/laden) or `chassis_plate` (chassis) among records still `yard_status: 'in'`. The 5-item empty-container checklist (light test, rust-through, floor, stains/foreign objects, exterior+container no.) follows `FLS-TRN-WI-CII-001`; `inspection_status` auto-flips to `passed` only when all 5 items are `pass`.
 
 ## Conventions
 

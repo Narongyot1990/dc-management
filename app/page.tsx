@@ -2,7 +2,7 @@
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import Link from 'next/link';
-import { ClipboardList, Truck, Package, ClipboardCheck } from 'lucide-react';
+import { ClipboardList, Truck, Package, ClipboardCheck, Warehouse } from 'lucide-react';
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -51,6 +51,17 @@ export default function HomePage() {
       iconColor: 'text-amber-600',
       hoverBorder: 'hover:border-amber-200',
       arrow: 'group-hover:text-amber-600',
+    },
+    {
+      href: '/yardcheck',
+      icon: Warehouse,
+      title: t('yc_form_title'),
+      description: 'Yard in/out & inspection',
+      gradient: 'from-teal-500 to-teal-600',
+      iconBg: 'bg-teal-50',
+      iconColor: 'text-teal-600',
+      hoverBorder: 'hover:border-teal-200',
+      arrow: 'group-hover:text-teal-600',
     },
   ];
 

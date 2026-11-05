@@ -2,7 +2,7 @@
 // Style Utilities
 // =============================================
 
-import { STATUS_COLORS, BADGE_COLORS, VENDOR_COLORS, CC_STATUS_COLORS } from './constants';
+import { STATUS_COLORS, BADGE_COLORS, VENDOR_COLORS, CC_STATUS_COLORS, YARD_TYPE_COLORS, YARD_STATUS_COLORS, YARD_INSPECTION_COLORS } from './constants';
 import type { BookingStatus, JobStatus } from '@/types';
 
 /**
@@ -45,6 +45,27 @@ export function getVendorColor(vendor: string): string {
  */
 export function getCCStatusColor(status: string): { bg: string; border: string } {
   return CC_STATUS_COLORS[status] || { bg: 'bg-gray-50 text-gray-600', border: 'border-l-gray-300' };
+}
+
+/**
+ * Get yard check type badge color (empty/laden/chassis)
+ */
+export function getYardTypeColor(type: string): string {
+  return YARD_TYPE_COLORS[type] || YARD_TYPE_COLORS.empty;
+}
+
+/**
+ * Get yard check yard-status badge color (in/out)
+ */
+export function getYardStatusColor(status: string): string {
+  return YARD_STATUS_COLORS[status] || YARD_STATUS_COLORS.out;
+}
+
+/**
+ * Get yard check inspection-status badge color (pending/passed)
+ */
+export function getYardInspectionColor(status: string): string {
+  return YARD_INSPECTION_COLORS[status] || YARD_INSPECTION_COLORS.pending;
 }
 
 /**

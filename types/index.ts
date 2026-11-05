@@ -112,6 +112,52 @@ export interface ContainerCheckFormData {
   remark?: string;
 }
 
+// ----- Yard Check -----
+export type YardCheckType = 'empty' | 'laden' | 'chassis';
+export type YardCheckSize = '20GP' | '40GP' | '40HC';
+export type YardCheckYardStatus = 'in' | 'out';
+export type YardCheckInspectionStatus = 'pending' | 'passed';
+export type YardCheckChecklistResult = 'pass' | 'fail' | null;
+
+export interface YardCheckChecklistItem {
+  item: 1 | 2 | 3 | 4 | 5;
+  result: YardCheckChecklistResult;
+}
+
+export interface YardCheckHistory {
+  action: 'create' | 'update' | 'out' | 'inspect';
+  at: string | Date;
+  changes?: string;
+}
+
+export interface YardCheck {
+  id: string;
+  type: YardCheckType;
+  container_no: string | null;
+  size: YardCheckSize | null;
+  chassis_plate: string;
+  seal_no?: string;
+  yard: string;
+  yard_status: YardCheckYardStatus;
+  inspection_status: YardCheckInspectionStatus | null;
+  checklist?: YardCheckChecklistItem[];
+  ng_detail?: string;
+  checked_at: string | Date;
+  checked_by: string;
+  updated_at?: string | Date;
+  remark?: string;
+  history?: YardCheckHistory[];
+}
+
+export interface YardCheckFormData {
+  type: YardCheckType | '';
+  container_no: string;
+  size: YardCheckSize | '';
+  chassis_plate: string;
+  seal_no?: string;
+  remark?: string;
+}
+
 // ----- Scan Result -----
 export interface ScanResult {
   booking_no: string | null;
