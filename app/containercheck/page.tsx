@@ -3,7 +3,7 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { ContainerCheck, ContainerCheckFormData, ContainerCheckLocation, ContainerCheckStatus } from '@/types';
+import type { ContainerCheck, ContainerCheckFormData, ContainerCheckLocation, ContainerCheckStatus, ContainerScanResult } from '@/types';
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
 import { DOCKS, CC_VENDORS } from '@/utils/constants';
 import {
@@ -138,7 +138,7 @@ function ContainerCheckForm() {
     lookupFromCache(formData.container_no, mode);
   }, [formData.container_no, mode, lookupFromCache]);
 
-  const handleScanComplete = (containerNumber: string) => {
+  const handleScanComplete = ({ containerNumber }: ContainerScanResult) => {
     setFormData({ ...formData, container_no: containerNumber });
     setShowScanner(false);
   };

@@ -2,7 +2,7 @@
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { YardCheck, YardCheckType, YardCheckSize, YardCheckChecklistItem } from '@/types';
+import type { YardCheck, YardCheckType, YardCheckSize, YardCheckChecklistItem, ContainerScanResult } from '@/types';
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
 import { YARD_SIZES, YARD_CHECKLIST, YARD_NAME } from '@/utils/constants';
 import { getYardEmptyDisplayStatus } from '@/utils/styles';
@@ -124,11 +124,17 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect 
     lookupFromCache(searchValue);
   }, [searchValue, lookupFromCache]);
 
-  const handleScanComplete = (containerNumber: string) => {
+  const handleScanComplete = ({ containerNumber, size, chassisPlate }: ContainerScanResult) => {
     if (mode === 'update') {
       setSearchValue(containerNumber);
     } else {
-      setFormData((f) => ({ ...f, container_no: containerNumber }));
+      setFormData((f) => ({
+        ...f,
+        container_no: containerNumber,
+        // Only fill size/chassis when the AI confidently detected them from the photo — leave manual otherwise.
+        size: size && (type === 'empty' || type === 'laden') ? size : f.size,
+        chassis_plate: chassisPlate || f.chassis_plate,
+      }));
     }
     setShowScanner(false);
   };
@@ -634,6 +640,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect 
 
       {showScanner && (
         <ContainerScanner
+          mode="yard"
           onScan={handleScanComplete}
           onClose={() => setShowScanner(false)}
         />

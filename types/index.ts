@@ -168,6 +168,15 @@ export interface ScanResult {
   missing_fields: string[];
 }
 
+// ----- Container Photo Scan (OCR) -----
+export interface ContainerScanResult {
+  containerNumber: string;
+  /** Container length/height bucket derived from the ISO 6346 size-type code, e.g. "45G1" -> "40HC". Optional — filled only when confidently detected. */
+  size?: YardCheckSize | null;
+  /** Trailer/chassis registration plate read from the image (e.g. "74-7267"). Optional — filled only when confidently detected. */
+  chassisPlate?: string | null;
+}
+
 // ----- API Response -----
 export interface ApiResponse<T> {
   success: boolean;

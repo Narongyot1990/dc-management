@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
-import type { Booking, JobType, JobFormData } from '@/types';
+import type { Booking, JobType, JobFormData, ContainerScanResult } from '@/types';
 import { formatDateTime } from '@/utils/format';
 import { DOCKS } from '@/utils/constants';
 import { useDockEvents, useBookingEvents, useJobEvents } from '@/hooks/usePusher';
@@ -331,7 +331,7 @@ export default function PlannerPage() {
     // User can now submit the new IN job
   };
 
-  const handleScanComplete = (containerNumber: string) => {
+  const handleScanComplete = ({ containerNumber }: ContainerScanResult) => {
     setFormData({ ...formData, container_no: containerNumber });
     setSearchQuery(containerNumber);
     setShowScanner(false);

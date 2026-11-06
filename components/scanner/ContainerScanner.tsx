@@ -3,13 +3,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Camera, Upload, X, ScanLine, Loader2, Search, AlertCircle, Info } from 'lucide-react';
+import type { ContainerScanResult } from '@/types';
 
 interface ContainerScannerProps {
-  onScan: (containerNumber: string) => void;
+  /** 'yard' also tries to read the ISO size/type code and chassis plate visible in the photo. Default: 'container' (container number only). */
+  mode?: 'container' | 'yard';
+  onScan: (result: ContainerScanResult) => void;
   onClose: () => void;
 }
 
-export function ContainerScanner({ onScan, onClose }: ContainerScannerProps) {
+export function ContainerScanner({ mode = 'container', onScan, onClose }: ContainerScannerProps) {
   const { t } = useLanguage();
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +28,7 @@ export function ContainerScanner({ onScan, onClose }: ContainerScannerProps) {
   // ============= OCR LOGIC =============
 
   // Perform OCR using Gemini 2.5 Flash API
-  const performOCR = useCallback(async (canvas: HTMLCanvasElement): Promise<string | null> => {
+  const performOCR = useCallback(async (canvas: HTMLCanvasElement): Promise<ContainerScanResult | null> => {
     try {
       console.log('🔍 Starting Gemini OCR...');
       setOcrProgress(10);
@@ -42,7 +45,7 @@ export function ContainerScanner({ onScan, onClose }: ContainerScannerProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ image: base64Image }),
+        body: JSON.stringify({ image: base64Image, mode }),
       });
 
       setOcrProgress(80);
@@ -61,7 +64,7 @@ export function ContainerScanner({ onScan, onClose }: ContainerScannerProps) {
 
       if (data.containerNumber) {
         console.log('✅ Container number found:', data.containerNumber);
-        return data.containerNumber;
+        return { containerNumber: data.containerNumber, size: data.size ?? null, chassisPlate: data.chassisPlate ?? null };
       } else {
         console.log('❌ No container number found');
         setDebugText(data.rawResponse || 'No container number detected');
@@ -74,7 +77,7 @@ export function ContainerScanner({ onScan, onClose }: ContainerScannerProps) {
     } finally {
       setOcrProgress(0);
     }
-  }, []);
+  }, [mode]);
 
   // Capture full frame from video
   const captureROI = useCallback((): HTMLCanvasElement | null => {
@@ -125,12 +128,12 @@ export function ContainerScanner({ onScan, onClose }: ContainerScannerProps) {
     const canvas = captureROI();
     if (!canvas) return;
 
-    const containerNo = await performOCR(canvas);
+    const result = await performOCR(canvas);
 
-    if (containerNo) {
-      console.log('✅ Container found:', containerNo);
+    if (result) {
+      console.log('✅ Container found:', result);
       stopCamera();
-      onScan(containerNo);
+      onScan(result);
     }
   }, [captureROI, performOCR, onScan, stopCamera]);
 
@@ -252,11 +255,11 @@ export function ContainerScanner({ onScan, onClose }: ContainerScannerProps) {
             console.log('📤 Processing uploaded image...');
 
             // Perform OCR on the image
-            const containerNo = await performOCR(canvas);
+            const result = await performOCR(canvas);
 
-            if (containerNo) {
-              console.log('✅ Successfully extracted from uploaded image:', containerNo);
-              onScan(containerNo);
+            if (result) {
+              console.log('✅ Successfully extracted from uploaded image:', result);
+              onScan(result);
             } else {
               setError(t('scanner_error_not_found'));
             }
