@@ -82,6 +82,8 @@
   "scanner_upload_image": "Upload Image",
   "scanner_capture_scan": "Capture & Scan",
   "scanner_processing": "Processing...",
+  "scanner_captured": "Captured",
+  "scanner_captured_hint": "You can move the camera away now",
   "scanner_stop": "Stop",
   "scanner_instruction_title": "Instructions:",
   "scanner_instruction_1": "Position camera at appropriate distance",

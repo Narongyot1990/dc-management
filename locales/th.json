@@ -82,6 +82,8 @@
   "scanner_upload_image": "อัปโหลดรูปภาพ",
   "scanner_capture_scan": "ถ่ายรูป & สแกน",
   "scanner_processing": "กำลังประมวลผล...",
+  "scanner_captured": "ถ่ายแล้ว",
+  "scanner_captured_hint": "วางกล้องได้เลย",
   "scanner_stop": "หยุด",
   "scanner_instruction_title": "คำแนะนำ:",
   "scanner_instruction_1": "วางกล้องให้อยู่ในระยะที่เหมาะสม",

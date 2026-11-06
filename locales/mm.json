@@ -82,6 +82,8 @@
   "scanner_upload_image": "ဓာတ်ပုံ တင်",
   "scanner_capture_scan": "ဓာတ်ပုံ ရိုက် & စကင်",
   "scanner_processing": "စီစစ်နေသည်...",
+  "scanner_captured": "ရိုက်ပြီးပါပြီ",
+  "scanner_captured_hint": "ကင်မရာကိုရွှေ့နိုင်ပါပြီ",
   "scanner_stop": "ရပ်",
   "scanner_instruction_title": "လမ်းညွှန်ချက်:",
   "scanner_instruction_1": "ကင်မရာကို သင့်လျော်သော အကွာအဝေးတွင် ထား",

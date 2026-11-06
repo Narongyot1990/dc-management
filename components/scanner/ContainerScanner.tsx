@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Camera, Upload, X, ScanLine, Loader2, Search, AlertCircle, Info } from 'lucide-react';
+import { Camera, Upload, X, ScanLine, Loader2, Check, AlertCircle, Info } from 'lucide-react';
 import type { ContainerScanResult } from '@/types';
 
 interface ContainerScannerProps {
@@ -19,6 +19,7 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
   const [ocrProgress, setOcrProgress] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [debugText, setDebugText] = useState<string>('');
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -121,12 +122,16 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
     }
     setIsScanning(false);
     setOcrProgress(0);
+    setCapturedImage(null);
   }, []);
 
   // Scan frame and perform OCR
   const scanFrame = useCallback(async () => {
     const canvas = captureROI();
     if (!canvas) return;
+
+    // Freeze the captured frame immediately so the user sees the shot was taken and can move away.
+    setCapturedImage(canvas.toDataURL('image/jpeg', 0.85));
 
     const result = await performOCR(canvas);
 
@@ -170,6 +175,7 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
     setError(null);
     await scanFrame();
     setIsProcessing(false);
+    setCapturedImage(null); // if scan failed/not found, go back to live preview to retry
   }, [isProcessing, scanFrame]);
 
   // Setup video stream when isScanning becomes true (NO AUTO-SCAN)
@@ -290,7 +296,7 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
       <div className="bg-white rounded-xl max-w-lg w-full p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -318,9 +324,15 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
               autoPlay
               playsInline
               muted
-              className="w-full h-64 object-cover"
+              className={`w-full h-64 object-cover ${capturedImage ? 'invisible' : ''}`}
               style={{ backgroundColor: '#000' }}
             />
+
+            {/* Frozen frame: shown the instant capture happens, so the user knows they can move the camera away */}
+            {capturedImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={capturedImage} alt="Captured frame" className="absolute inset-0 w-full h-64 object-cover" />
+            )}
 
             {/* Hidden canvas for OCR */}
             <canvas ref={canvasRef} className="hidden" />
@@ -329,18 +341,23 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
             {isProcessing && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
                 <div className="text-center">
+                  {capturedImage && (
+                    <div className="inline-flex items-center gap-1 bg-emerald-500 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full mb-3">
+                      <Check className="w-3.5 h-3.5" />
+                      {t('scanner_captured')}
+                    </div>
+                  )}
+
                   {/* Spinner Animation */}
-                  <div className="relative w-20 h-20 mx-auto mb-4">
+                  <div className="relative w-16 h-16 mx-auto mb-3">
                     <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
                     <div className="absolute inset-0 border-4 border-transparent border-t-blue-500 rounded-full animate-spin"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Search className="w-8 h-8 text-blue-400" />
-                    </div>
                   </div>
 
                   {/* Progress Text */}
                   <div className="text-white">
-                    <p className="text-base font-semibold mb-2">{t('scanner_processing')}</p>
+                    <p className="text-base font-semibold mb-1">{t('scanner_processing')}</p>
+                    <p className="text-xs text-emerald-300 mb-2">{t('scanner_captured_hint')}</p>
                     <div className="w-48 bg-gray-700 rounded-full h-1.5 mx-auto">
                       <div
                         className="bg-gradient-to-r from-blue-500 to-emerald-500 h-1.5 rounded-full transition-all duration-300"

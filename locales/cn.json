@@ -82,6 +82,8 @@
   "scanner_upload_image": "上传图片",
   "scanner_capture_scan": "拍照 & 扫描",
   "scanner_processing": "处理中...",
+  "scanner_captured": "已拍摄",
+  "scanner_captured_hint": "现在可以移开相机了",
   "scanner_stop": "停止",
   "scanner_instruction_title": "操作说明：",
   "scanner_instruction_1": "将相机放置在适当的距离",
