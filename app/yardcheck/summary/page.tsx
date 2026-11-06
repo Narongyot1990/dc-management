@@ -37,7 +37,7 @@ function YardCheckSummaryContent() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilters, setTypeFilters] = useState<Set<YardCheckType>>(new Set());
-  const [outExpanded, setOutExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
   const [actionCheck, setActionCheck] = useState<YardCheck | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingCheck, setDeletingCheck] = useState<YardCheck | null>(null);
@@ -100,16 +100,11 @@ function YardCheckSummaryContent() {
     const emptyIn = checks.filter((c) => c.type === 'empty' && c.yard_status === 'in');
     const ladenIn = checks.filter((c) => c.type === 'laden' && c.yard_status === 'in');
     const chassisIn = checks.filter((c) => c.type === 'chassis' && c.yard_status === 'in');
-    const todayStr = new Date().toDateString();
-    const ladenInToday = checks.filter((c) => c.type === 'laden' && new Date(c.checked_at).toDateString() === todayStr).length;
-    const ladenOutToday = checks.filter((c) => c.type === 'laden' && c.yard_status === 'out' && c.updated_at && new Date(c.updated_at).toDateString() === todayStr).length;
     return {
       emptyTotal: emptyIn.length,
       emptyPassed: emptyIn.filter((c) => c.inspection_status === 'passed').length,
       emptyNotPassed: emptyIn.filter((c) => c.inspection_status !== 'passed').length,
       ladenTotal: ladenIn.length,
-      ladenInToday,
-      ladenOutToday,
       chassisTotal: chassisIn.length,
     };
   }, [checks]);
@@ -225,8 +220,6 @@ function YardCheckSummaryContent() {
     );
   };
 
-  const visibleOut = outExpanded ? outToday : outToday.slice(0, 3);
-
   return (
     <div className="flex flex-col overflow-hidden bg-background h-[calc(100vh-80px)] relative">
       {/* Header */}
@@ -249,8 +242,7 @@ function YardCheckSummaryContent() {
               }`}
             >
               <div className="text-[10px] font-semibold text-amber-700 mb-1">{t('yc_type_empty').toUpperCase()}</div>
-              <div className="text-2xl font-bold text-amber-900 leading-none">{stats.emptyTotal}</div>
-              <div className="text-[9px] text-amber-600 mt-0.5 mb-1.5">{t('yc_in_yard_now')}</div>
+              <div className="text-2xl font-bold text-amber-900 leading-none mb-1.5">{stats.emptyTotal}</div>
               <div className="flex items-center gap-1 text-[10px] text-emerald-700">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t('yc_passed')} {stats.emptyPassed}
               </div>
@@ -266,8 +258,6 @@ function YardCheckSummaryContent() {
             >
               <div className="text-[10px] font-semibold text-blue-700 mb-1">{t('yc_type_laden').toUpperCase()}</div>
               <div className="text-2xl font-bold text-blue-900 leading-none">{stats.ladenTotal}</div>
-              <div className="text-[9px] text-blue-600 mt-0.5 mb-1.5">{t('yc_in_yard_now')}</div>
-              <div className="text-[10px] text-blue-500">{stats.ladenInToday} / {stats.ladenOutToday}</div>
             </button>
             <button
               onClick={() => toggleTypeFilter('chassis')}
@@ -277,8 +267,6 @@ function YardCheckSummaryContent() {
             >
               <div className="text-[10px] font-semibold text-violet-700 mb-1">{t('yc_type_chassis').toUpperCase()}</div>
               <div className="text-2xl font-bold text-violet-900 leading-none">{stats.chassisTotal}</div>
-              <div className="text-[9px] text-violet-600 mt-0.5 mb-1.5">{t('yc_in_yard_now')}</div>
-              <div className="text-[10px] text-violet-500">{t('yc_bare_chassis')}</div>
             </button>
           </div>
 
@@ -294,66 +282,61 @@ function YardCheckSummaryContent() {
         <div className="px-3 pb-2.5">
           <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} />
         </div>
+
+        {/* IN / OUT tabs */}
+        <div className="flex px-3 pb-2.5 gap-2">
+          <button
+            onClick={() => setActiveTab('in')}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-colors ${
+              activeTab === 'in' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'
+            }`}
+          >
+            {t('yc_in_yard_section').toUpperCase()} · {inYard.length}
+          </button>
+          <button
+            onClick={() => setActiveTab('out')}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-colors ${
+              activeTab === 'out' ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
+            }`}
+          >
+            {t('yc_out_today_section').toUpperCase()} · {outToday.length}
+          </button>
+        </div>
       </div>
 
       {/* List */}
-      <div className="flex-1 px-3 py-2 overflow-y-auto space-y-3">
+      <div className="flex-1 px-3 py-2 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-10">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600" />
           </div>
+        ) : activeTab === 'in' ? (
+          inYard.length === 0 ? (
+            <div className="text-center text-xs text-gray-400 py-6 bg-white rounded-lg border border-gray-200">
+              {t('yc_no_records')}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg border border-emerald-200 divide-y-4 divide-gray-50 overflow-hidden">
+              {inYard.map(renderInYardCard)}
+            </div>
+          )
+        ) : outToday.length === 0 ? (
+          <div className="text-center text-xs text-gray-400 py-6 bg-gray-50 rounded-lg border border-gray-200">
+            {t('yc_no_records')}
+          </div>
         ) : (
-          <>
-            {/* IN */}
-            <div>
-              <div className="flex items-center gap-2 px-1 mb-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                <h2 className="text-xs font-bold text-gray-800 tracking-wide">{t('yc_in_yard_section').toUpperCase()}</h2>
-                <span className="text-[11px] text-gray-400">{inYard.length} {t('yc_items_on_site')}</span>
+          <div className="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-200">
+            {outToday.map((c) => (
+              <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-[11px]">
+                <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
+                  {t(`yc_type_${c.type}`)}
+                </span>
+                <span className="font-mono font-medium text-gray-700 truncate flex-1">{c.container_no || c.chassis_plate}</span>
+                <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
+                <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
               </div>
-              {inYard.length === 0 ? (
-                <div className="text-center text-xs text-gray-400 py-6 bg-white rounded-lg border border-gray-200">
-                  {t('yc_no_records')}
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg border border-emerald-200 divide-y-4 divide-gray-50 overflow-hidden">
-                  {inYard.map(renderInYardCard)}
-                </div>
-              )}
-            </div>
-
-            {/* OUT */}
-            <div>
-              <button onClick={() => setOutExpanded((v) => !v)} className="w-full flex items-center gap-2 px-1 mb-1.5">
-                <span className="w-2 h-2 rounded-full bg-gray-400 shrink-0" />
-                <h2 className="text-xs font-bold text-gray-500 tracking-wide">{t('yc_out_today_section').toUpperCase()}</h2>
-                <span className="text-[11px] text-gray-400">{outToday.length} {t('yc_departed_label')}</span>
-              </button>
-              {outToday.length === 0 ? (
-                <div className="text-center text-xs text-gray-400 py-4 bg-gray-50 rounded-lg border border-gray-200">
-                  {t('yc_no_records')}
-                </div>
-              ) : (
-                <div className="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-200 opacity-80">
-                  {visibleOut.map((c) => (
-                    <div key={c.id} className="flex items-center gap-2 px-3 py-1.5 text-[11px]">
-                      <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
-                        {t(`yc_type_${c.type}`)}
-                      </span>
-                      <span className="font-mono font-medium text-gray-700 truncate flex-1">{c.container_no || c.chassis_plate}</span>
-                      <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
-                      <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
-                    </div>
-                  ))}
-                  {!outExpanded && outToday.length > 3 && (
-                    <button onClick={() => setOutExpanded(true)} className="w-full text-center py-1.5 text-[11px] text-gray-500 hover:text-gray-700 font-medium">
-                      {t('yc_show_more')} ({outToday.length - 3})
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
+            ))}
+          </div>
         )}
       </div>
 
