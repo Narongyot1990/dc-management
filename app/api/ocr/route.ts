@@ -34,7 +34,7 @@ Extract up to three things:
    - 1st digit "4" AND 2nd digit is anything else (e.g. "0", "2") -> "40GP"
    - If the code isn't visible/legible, return null. Do not guess from the container number alone.
 
-3. chassisPlate — the Thai trailer/chassis license plate number (NOT the truck's own plate), typically on a red-and-white striped plate labeled "รถพ่วง" or a yellow plate showing format like "74-7267". Return just the plate number (digits and dash), e.g. "74-7267". If not visible/legible, return null.
+3. chassisPlate — the Thai trailer/chassis vehicle registration number (NOT the truck's own plate). It is printed on the trailer's yellow license plate (format: "THAILAND <province code>" above the number, province name in Thai below), as digits separated by a dash, e.g. "74-7267" or "700-7969" (the prefix can be 1-4 digits). A nearby red-and-white striped sign that just reads "รถพ่วง" is only a vehicle-type label, not the registration — do not read digits from it. Return just the plate number (digits and dash) from the yellow registration plate. If not visible/legible, return null.
 
 Only fill a field when you are confident; leave it null rather than guessing.
 
@@ -49,7 +49,7 @@ Return ONLY the JSON, no other text.`;
 
 const VALID_SIZES = new Set(['20GP', '40GP', '40HC']);
 const CONTAINER_PATTERN = /^[A-Z]{3}[UJZ]\d{7}$/;
-const CHASSIS_PLATE_PATTERN = /^\d{1,2}-\d{3,5}$/;
+const CHASSIS_PLATE_PATTERN = /^\d{1,4}-\d{3,5}$/;
 
 export async function POST(request: NextRequest) {
   try {
