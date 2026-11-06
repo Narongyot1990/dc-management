@@ -119,6 +119,35 @@ export function formatTime(dateString?: string | Date | null): string {
 }
 
 /**
+ * Format date as "dd/mm/yyyy hh:mm (relative)" e.g. "06/11/2026 14:30 (14h)" or "(2d)"
+ */
+export function formatDateTimeRelative(dateValue?: string | Date | null): string {
+  if (!dateValue) return '-';
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  if (isNaN(date.getTime())) return '-';
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  let rel: string;
+  if (diffMins < 1) rel = 'now';
+  else if (diffHours < 1) rel = `${diffMins}m`;
+  else if (diffDays < 1) rel = `${diffHours}h`;
+  else rel = `${diffDays}d`;
+
+  return `${day}/${month}/${year} ${hours}:${minutes} (${rel})`;
+}
+
+/**
  * Format date for datetime-local input
  * @param date - Date object
  * @returns ISO string formatted for input

@@ -3,7 +3,7 @@
 // =============================================
 
 import { STATUS_COLORS, BADGE_COLORS, VENDOR_COLORS, CC_STATUS_COLORS, YARD_TYPE_COLORS, YARD_STATUS_COLORS, YARD_INSPECTION_COLORS } from './constants';
-import type { BookingStatus, JobStatus } from '@/types';
+import type { BookingStatus, JobStatus, YardCheck } from '@/types';
 
 /**
  * Get border color class for booking status
@@ -66,6 +66,19 @@ export function getYardStatusColor(status: string): string {
  */
 export function getYardInspectionColor(status: string): string {
   return YARD_INSPECTION_COLORS[status] || YARD_INSPECTION_COLORS.pending;
+}
+
+/**
+ * Derived 3-way display status for an empty-container yard check:
+ * - 'created': checklist not started yet
+ * - 'passed': all 5 items passed
+ * - 'failed': checklist started/attempted but not all passed
+ */
+export function getYardEmptyDisplayStatus(c: YardCheck): 'created' | 'passed' | 'failed' {
+  const hasFail = (c.checklist || []).some((i) => i.result === 'fail');
+  if (hasFail) return 'failed';
+  if (c.inspection_status === 'passed') return 'passed';
+  return 'created';
 }
 
 /**
