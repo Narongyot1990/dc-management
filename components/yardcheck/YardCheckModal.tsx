@@ -109,7 +109,9 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect 
     }
     const v = value.toUpperCase();
     const match = cacheRef.current.find(
-      (c) => c.yard_status === 'in' && (c.container_no === v || c.chassis_plate === v)
+      (c) =>
+        (c.container_no === v || c.chassis_plate === v) &&
+        (c.yard_status === 'in' || (c.type === 'empty' && getYardEmptyDisplayStatus(c) !== 'passed'))
     );
     if (match) {
       setLookupStatus('found');
@@ -468,7 +470,9 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect 
                     <div className="rounded-xl border border-gray-200 overflow-hidden">
                       <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50">
                         <span className="text-[11px] font-bold text-gray-700">{t(`yc_type_${foundRecord.type}`)}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-500 text-white">{t('yc_status_in')}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white ${foundRecord.yard_status === 'in' ? 'bg-emerald-500' : 'bg-gray-500'}`}>
+                          {foundRecord.yard_status === 'in' ? t('yc_status_in') : t('yc_departed_label')}
+                        </span>
                       </div>
                       <div className="p-3">
                         <div className="font-mono text-base font-semibold text-gray-900">
@@ -486,14 +490,14 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect 
                         })()}
                       </div>
                       <div className="flex gap-2 px-3 pb-3">
-                        {foundRecord.type === 'empty' && foundRecord.inspection_status === 'pending' ? (
+                        {foundRecord.type === 'empty' && getYardEmptyDisplayStatus(foundRecord) !== 'passed' ? (
                           <button
                             onClick={() => startInspecting(foundRecord)}
                             className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium"
                           >
                             {t('yc_inspect')}
                           </button>
-                        ) : (
+                        ) : foundRecord.yard_status === 'in' ? (
                           <button
                             onClick={handleMarkOut}
                             disabled={loading}
@@ -502,7 +506,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect 
                             <Truck className="w-4 h-4" />
                             {loading ? '...' : t('yc_mark_out')}
                           </button>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   )}

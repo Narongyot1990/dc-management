@@ -38,6 +38,7 @@ function YardCheckSummaryContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilters, setTypeFilters] = useState<Set<YardCheckType>>(new Set());
   const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
+  const [outRange, setOutRange] = useState<'24h' | '7d' | 'all'>('24h');
   const [actionCheck, setActionCheck] = useState<YardCheck | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingCheck, setDeletingCheck] = useState<YardCheck | null>(null);
@@ -47,7 +48,7 @@ function YardCheckSummaryContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [initialInspect, setInitialInspect] = useState<YardCheck | null>(null);
 
-  const { checks, loading, markOut, deleteCheck, actionLoading } = useYardChecks({});
+  const { checks, loading, refetch, markOut, deleteCheck, actionLoading } = useYardChecks({});
 
   // Deep link: /yardcheck/summary?inspect=<id> opens the checklist directly.
   useEffect(() => {
@@ -81,33 +82,43 @@ function YardCheckSummaryContent() {
     return true;
   }, [typeFilters, searchQuery]);
 
+  // A record still needs action if it's physically in the yard (needs mark-out), or
+  // if it's an empty container whose checklist isn't passed yet — even if it already
+  // left, so checkers can go back and correct a wrong/incomplete inspection.
+  const needsAction = useCallback((c: YardCheck) => {
+    if (c.yard_status === 'in') return true;
+    return c.type === 'empty' && getYardEmptyDisplayStatus(c) !== 'passed';
+  }, []);
+
   const inYard = useMemo(
-    () => checks.filter((c) => c.yard_status === 'in' && matchesFilters(c)),
-    [checks, matchesFilters]
+    () => checks.filter((c) => needsAction(c) && matchesFilters(c)),
+    [checks, matchesFilters, needsAction]
   );
 
-  const outToday = useMemo(() => {
-    const todayStr = new Date().toDateString();
+  const outList = useMemo(() => {
+    const now = Date.now();
+    const rangeMs = outRange === '24h' ? 24 * 60 * 60 * 1000 : outRange === '7d' ? 7 * 24 * 60 * 60 * 1000 : null;
     return checks.filter((c) => {
       if (c.yard_status !== 'out') return false;
       if (!matchesFilters(c)) return false;
+      if (rangeMs === null) return true;
       const outAt = c.updated_at ? new Date(c.updated_at) : new Date(c.checked_at);
-      return outAt.toDateString() === todayStr;
+      return now - outAt.getTime() <= rangeMs;
     });
-  }, [checks, matchesFilters]);
+  }, [checks, matchesFilters, outRange]);
 
   const stats = useMemo(() => {
-    const emptyIn = checks.filter((c) => c.type === 'empty' && c.yard_status === 'in');
-    const ladenIn = checks.filter((c) => c.type === 'laden' && c.yard_status === 'in');
-    const chassisIn = checks.filter((c) => c.type === 'chassis' && c.yard_status === 'in');
+    const emptyAction = checks.filter((c) => c.type === 'empty' && needsAction(c));
+    const ladenAction = checks.filter((c) => c.type === 'laden' && needsAction(c));
+    const chassisAction = checks.filter((c) => c.type === 'chassis' && needsAction(c));
     return {
-      emptyTotal: emptyIn.length,
-      emptyPassed: emptyIn.filter((c) => c.inspection_status === 'passed').length,
-      emptyNotPassed: emptyIn.filter((c) => c.inspection_status !== 'passed').length,
-      ladenTotal: ladenIn.length,
-      chassisTotal: chassisIn.length,
+      emptyTotal: emptyAction.length,
+      emptyPassed: emptyAction.filter((c) => getYardEmptyDisplayStatus(c) === 'passed').length,
+      emptyNotPassed: emptyAction.filter((c) => getYardEmptyDisplayStatus(c) !== 'passed').length,
+      ladenTotal: ladenAction.length,
+      chassisTotal: chassisAction.length,
     };
-  }, [checks]);
+  }, [checks, needsAction]);
 
   const handleMarkOut = async (check: YardCheck) => {
     await markOut(check);
@@ -175,11 +186,22 @@ function YardCheckSummaryContent() {
               </span>
             )}
             {c.type === 'chassis' && <span className="text-[10px] text-gray-400">{t('yc_no_container')}</span>}
+            {c.yard_status === 'out' && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 font-semibold shrink-0">
+                {t('yc_departed_label')}
+              </span>
+            )}
           </div>
           <button onClick={() => setActionCheck(actionCheck?.id === c.id ? null : c)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 shrink-0">
             <MoreVertical className="w-4 h-4" />
           </button>
         </div>
+
+        {c.yard_status === 'out' && disp !== 'passed' && (
+          <div className="px-3 pt-1">
+            <p className="text-[10px] text-amber-600">{t('yc_already_out_hint')}</p>
+          </div>
+        )}
 
         {hasNg && (
           <div className="px-3 pt-1">
@@ -299,9 +321,25 @@ function YardCheckSummaryContent() {
               activeTab === 'out' ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
             }`}
           >
-            {t('yc_out_today_section').toUpperCase()} · {outToday.length}
+            {t('yc_out_today_section').toUpperCase()} · {outList.length}
           </button>
         </div>
+
+        {activeTab === 'out' && (
+          <div className="flex px-3 pb-2.5 gap-1.5">
+            {(['24h', '7d', 'all'] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setOutRange(r)}
+                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                  outRange === r ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {t(`yc_range_${r}`)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* List */}
@@ -320,13 +358,13 @@ function YardCheckSummaryContent() {
               {inYard.map(renderInYardCard)}
             </div>
           )
-        ) : outToday.length === 0 ? (
+        ) : outList.length === 0 ? (
           <div className="text-center text-xs text-gray-400 py-6 bg-gray-50 rounded-lg border border-gray-200">
             {t('yc_no_records')}
           </div>
         ) : (
           <div className="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-200">
-            {outToday.map((c) => (
+            {outList.map((c) => (
               <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-[11px]">
                 <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
                   {t(`yc_type_${c.type}`)}
@@ -373,7 +411,7 @@ function YardCheckSummaryContent() {
         isOpen={modalOpen}
         mode={modalMode}
         onClose={closeModal}
-        onSaved={() => {}}
+        onSaved={refetch}
         initialInspect={initialInspect}
       />
 

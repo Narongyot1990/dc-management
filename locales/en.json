@@ -273,6 +273,10 @@
   "yc_all_types": "All Types",
   "yc_no_records": "No yard check records found",
   "yc_awaiting_checklist": "containers awaiting checklist",
+  "yc_range_24h": "24h",
+  "yc_range_7d": "7 days",
+  "yc_range_all": "All",
+  "yc_already_out_hint": "Already left the yard — checklist still needs fixing",
 
   "guide_import_title": "Import Guide",
   "guide_import_subtitle": "Step-by-step guide for drivers delivering goods to the facility",

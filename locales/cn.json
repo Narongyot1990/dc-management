@@ -273,6 +273,10 @@
   "yc_all_types": "全部类型",
   "yc_no_records": "未找到场地检查记录",
   "yc_awaiting_checklist": "个空箱待检查清单",
+  "yc_range_24h": "24小时",
+  "yc_range_7d": "7天",
+  "yc_range_all": "全部",
+  "yc_already_out_hint": "已离场，但检查清单仍需修正",
 
   "guide_import_title": "进口卸货指南",
   "guide_import_subtitle": "司机进入工厂卸货的操作流程指南",

@@ -273,6 +273,10 @@
   "yc_all_types": "ทุกประเภท",
   "yc_no_records": "ไม่พบข้อมูลการตรวจลาน",
   "yc_awaiting_checklist": "ตู้รอตรวจ Checklist",
+  "yc_range_24h": "24 ชม.",
+  "yc_range_7d": "7 วัน",
+  "yc_range_all": "ทั้งหมด",
+  "yc_already_out_hint": "ออกจากลานแล้ว แต่ยังต้องแก้ไข Checklist",
 
   "guide_import_title": "คู่มือลงสินค้า (Import)",
   "guide_import_subtitle": "ขั้นตอนการเข้ามาติดต่อเพื่อลงสินค้าภายในโรงงาน สำหรับพนักงานขับรถ",
