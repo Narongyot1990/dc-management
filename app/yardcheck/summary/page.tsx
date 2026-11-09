@@ -152,6 +152,7 @@ function YardCheckSummaryContent() {
     const ok = await markOut(markOutCheck);
     if (ok) setMarkOutCheck(null);
   };
+  const cancelMarkOut = () => setMarkOutCheck(null);
 
   const handleDelete = async () => {
     if (!deletingCheck) return;
@@ -160,6 +161,10 @@ function YardCheckSummaryContent() {
       setShowDeleteModal(false);
       setDeletingCheck(null);
     }
+  };
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setDeletingCheck(null);
   };
 
   const openModal = (mode: YardCheckModalMode) => {
@@ -495,7 +500,7 @@ function YardCheckSummaryContent() {
       {markOutCheck && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setMarkOutCheck(null)}
+          onClick={cancelMarkOut}
         >
           <div className="bg-white rounded-xl p-4 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm font-medium text-gray-800 mb-1 flex items-center gap-2">
@@ -504,10 +509,10 @@ function YardCheckSummaryContent() {
             </p>
             <p className="text-xs text-gray-500 mb-4">{t('yc_confirm_mark_out_body')}</p>
             <div className="flex gap-2">
-              <button onClick={() => setMarkOutCheck(null)} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
+              <button type="button" onClick={cancelMarkOut} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
                 {t('cc_cancel')}
               </button>
-              <button onClick={confirmMarkOut} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-800 text-white disabled:opacity-50">
+              <button type="button" onClick={confirmMarkOut} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-800 text-white disabled:opacity-50">
                 {actionLoading ? '...' : t('yc_mark_out')}
               </button>
             </div>
@@ -519,7 +524,7 @@ function YardCheckSummaryContent() {
       {showDeleteModal && deletingCheck && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowDeleteModal(false)}
+          onClick={cancelDelete}
         >
           <div className="bg-white rounded-xl p-4 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm font-medium text-gray-800 mb-1 flex items-center gap-2">
@@ -528,10 +533,10 @@ function YardCheckSummaryContent() {
             </p>
             <p className="text-xs text-gray-500 mb-4">Delete this record?</p>
             <div className="flex gap-2">
-              <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
+              <button type="button" onClick={cancelDelete} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
                 {t('cc_cancel')}
               </button>
-              <button onClick={handleDelete} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-red-500 text-white disabled:opacity-50">
+              <button type="button" onClick={handleDelete} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-red-500 text-white disabled:opacity-50">
                 {actionLoading ? '...' : t('delete') || 'Delete'}
               </button>
             </div>
