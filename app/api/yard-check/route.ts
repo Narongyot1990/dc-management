@@ -139,6 +139,21 @@ export async function PUT(request: NextRequest) {
 
     if (!check.history) check.history = [];
 
+    // Edit record fields (fix typos, etc.)
+    const editableFields = ['container_no', 'size', 'chassis_plate', 'seal_no'] as const;
+    const edits: string[] = [];
+    for (const field of editableFields) {
+      if (body[field] === undefined) continue;
+      const nextValue = typeof body[field] === 'string' ? body[field].toUpperCase() : body[field];
+      if (check[field] !== nextValue) {
+        edits.push(field);
+        check[field] = nextValue;
+      }
+    }
+    if (edits.length > 0) {
+      check.history.push({ action: 'update', at: new Date(), changes: `edited: ${edits.join(', ')}` });
+    }
+
     // Update checklist progress (inspection)
     if (body.checklist) {
       check.checklist = body.checklist;

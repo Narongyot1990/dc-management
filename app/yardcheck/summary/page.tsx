@@ -15,12 +15,11 @@ import {
   AlertCircle,
   MoreVertical,
   Trash2,
+  Pencil,
   Package,
   Truck,
   Plus,
-  X,
   RefreshCw,
-  PackagePlus,
 } from 'lucide-react';
 
 export default function YardCheckSummaryPage() {
@@ -42,11 +41,12 @@ function YardCheckSummaryContent() {
   const [actionCheck, setActionCheck] = useState<YardCheck | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingCheck, setDeletingCheck] = useState<YardCheck | null>(null);
+  const [markOutCheck, setMarkOutCheck] = useState<YardCheck | null>(null);
 
-  const [fabOpen, setFabOpen] = useState(false);
   const [modalMode, setModalMode] = useState<YardCheckModalMode>('update');
   const [modalOpen, setModalOpen] = useState(false);
   const [initialInspect, setInitialInspect] = useState<YardCheck | null>(null);
+  const [initialEdit, setInitialEdit] = useState<YardCheck | null>(null);
 
   const { checks, loading, refetch, markOut, deleteCheck, actionLoading } = useYardChecks({});
 
@@ -120,8 +120,10 @@ function YardCheckSummaryContent() {
     };
   }, [checks, needsAction]);
 
-  const handleMarkOut = async (check: YardCheck) => {
-    await markOut(check);
+  const confirmMarkOut = async () => {
+    if (!markOutCheck) return;
+    const ok = await markOut(markOutCheck);
+    if (ok) setMarkOutCheck(null);
   };
 
   const handleDelete = async () => {
@@ -135,14 +137,22 @@ function YardCheckSummaryContent() {
 
   const openModal = (mode: YardCheckModalMode) => {
     setInitialInspect(null);
+    setInitialEdit(null);
     setModalMode(mode);
     setModalOpen(true);
-    setFabOpen(false);
+  };
+
+  const openEditModal = (check: YardCheck) => {
+    setInitialInspect(null);
+    setInitialEdit(check);
+    setModalMode('update');
+    setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setInitialInspect(null);
+    setInitialEdit(null);
     if (searchParams.get('inspect')) {
       window.history.replaceState(null, '', '/yardcheck/summary');
     }
@@ -176,14 +186,12 @@ function YardCheckSummaryContent() {
             <span className={`text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded shrink-0 ${getTypeBadgeClass(c.type)}`}>
               {t(`yc_type_${c.type}`).toUpperCase()}
             </span>
-            <span className="font-mono text-sm font-semibold text-gray-900 truncate">
-              {c.container_no || c.chassis_plate}
+            <span className="font-mono text-sm font-semibold text-gray-900 truncate flex items-center gap-0.5">
+              <Truck className="w-3.5 h-3.5 text-gray-400 shrink-0" />{c.chassis_plate}
             </span>
             {c.size && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 font-medium text-gray-600 shrink-0">{c.size}</span>}
             {c.container_no && (
-              <span className="text-[10px] text-gray-400 flex items-center gap-0.5 shrink-0">
-                <Truck className="w-3 h-3" />{c.chassis_plate}
-              </span>
+              <span className="text-[10px] text-gray-400 truncate shrink-0">{c.container_no}</span>
             )}
             {c.type === 'chassis' && <span className="text-[10px] text-gray-400">{t('yc_no_container')}</span>}
             {c.yard_status === 'out' && (
@@ -230,7 +238,7 @@ function YardCheckSummaryContent() {
             </button>
           ) : (
             <button
-              onClick={() => handleMarkOut(c)}
+              onClick={() => setMarkOutCheck(c)}
               disabled={actionLoading}
               className="shrink-0 text-[10px] px-2.5 py-1 rounded-md bg-gray-800 text-white font-medium disabled:opacity-50"
             >
@@ -300,9 +308,18 @@ function YardCheckSummaryContent() {
           )}
         </div>
 
-        {/* Search */}
-        <div className="px-3 pb-2.5">
-          <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} />
+        {/* Search + Update */}
+        <div className="px-3 pb-2.5 flex items-center gap-2">
+          <div className="flex-1">
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} />
+          </div>
+          <button
+            onClick={() => openModal('update')}
+            className="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
+            {t('yc_mode_update')}
+          </button>
         </div>
 
         {/* IN / OUT tabs */}
@@ -369,7 +386,10 @@ function YardCheckSummaryContent() {
                 <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
                   {t(`yc_type_${c.type}`)}
                 </span>
-                <span className="font-mono font-medium text-gray-700 truncate flex-1">{c.container_no || c.chassis_plate}</span>
+                <span className="font-mono font-medium text-gray-700 truncate flex-1 flex items-center gap-1">
+                  <Truck className="w-3 h-3 text-gray-400 shrink-0" />{c.chassis_plate}
+                  {c.container_no && <span className="text-gray-400 font-normal truncate">· {c.container_no}</span>}
+                </span>
                 <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
                 <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
               </div>
@@ -378,31 +398,14 @@ function YardCheckSummaryContent() {
         )}
       </div>
 
-      {/* Floating action button: Update / Create */}
-      <div className="absolute bottom-5 right-4 flex flex-col items-end gap-2 z-30">
-        {fabOpen && (
-          <div className="flex flex-col items-end gap-2 mb-1">
-            <button
-              onClick={() => openModal('create')}
-              className="flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-white shadow-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <PackagePlus className="w-4 h-4 text-amber-600" />
-              {t('yc_mode_create')}
-            </button>
-            <button
-              onClick={() => openModal('update')}
-              className="flex items-center gap-2 pl-3 pr-4 py-2.5 rounded-full bg-white shadow-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <RefreshCw className="w-4 h-4 text-amber-600" />
-              {t('yc_mode_update')}
-            </button>
-          </div>
-        )}
+      {/* Floating action button: straight to Create */}
+      <div className="absolute bottom-5 right-4 z-30">
         <button
-          onClick={() => setFabOpen((v) => !v)}
+          onClick={() => openModal('create')}
+          title={t('yc_mode_create')}
           className="w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-xl flex items-center justify-center transition-transform"
         >
-          {fabOpen ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+          <Plus className="w-6 h-6" />
         </button>
       </div>
 
@@ -413,6 +416,7 @@ function YardCheckSummaryContent() {
         onClose={closeModal}
         onSaved={refetch}
         initialInspect={initialInspect}
+        initialEdit={initialEdit}
       />
 
       {/* Action sheet */}
@@ -423,15 +427,45 @@ function YardCheckSummaryContent() {
         cancelLabel={t('cc_cancel')}
       >
         {actionCheck && (
-          <button
-            onClick={() => { setDeletingCheck(actionCheck); setShowDeleteModal(true); setActionCheck(null); }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-red-50 text-red-600 text-sm"
-          >
-            <Trash2 className="w-4 h-4" />
-            {t('delete') || 'Delete'}
-          </button>
+          <>
+            <button
+              onClick={() => { openEditModal(actionCheck); setActionCheck(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-gray-50 text-gray-700 text-sm"
+            >
+              <Pencil className="w-4 h-4" />
+              {t('yc_edit_record')}
+            </button>
+            <button
+              onClick={() => { setDeletingCheck(actionCheck); setShowDeleteModal(true); setActionCheck(null); }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg hover:bg-red-50 text-red-600 text-sm"
+            >
+              <Trash2 className="w-4 h-4" />
+              {t('delete') || 'Delete'}
+            </button>
+          </>
         )}
       </BottomSheet>
+
+      {/* Mark OUT confirm */}
+      {markOutCheck && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-4 max-w-sm w-full">
+            <p className="text-sm font-medium text-gray-800 mb-1 flex items-center gap-2">
+              <Truck className="w-4 h-4 text-gray-700" />
+              {markOutCheck.chassis_plate}{markOutCheck.container_no ? ` · ${markOutCheck.container_no}` : ''}
+            </p>
+            <p className="text-xs text-gray-500 mb-4">{t('yc_confirm_mark_out_body')}</p>
+            <div className="flex gap-2">
+              <button onClick={() => setMarkOutCheck(null)} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
+                {t('cc_cancel')}
+              </button>
+              <button onClick={confirmMarkOut} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-800 text-white disabled:opacity-50">
+                {actionLoading ? '...' : t('yc_mark_out')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirm */}
       {showDeleteModal && deletingCheck && (

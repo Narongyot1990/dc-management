@@ -277,6 +277,9 @@
   "yc_range_7d": "7 days",
   "yc_range_all": "All",
   "yc_already_out_hint": "Already left the yard — checklist still needs fixing",
+  "yc_edit_record": "Edit Record",
+  "yc_confirm_mark_out_title": "Confirm Mark OUT",
+  "yc_confirm_mark_out_body": "Confirm this record has left the yard?",
 
   "guide_import_title": "Import Guide",
   "guide_import_subtitle": "Step-by-step guide for drivers delivering goods to the facility",

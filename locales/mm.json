@@ -277,6 +277,9 @@
   "yc_range_7d": "၇ ရက်",
   "yc_range_all": "အားလုံး",
   "yc_already_out_hint": "ယာဒ်မှ ထွက်သွားပြီး သို့သော် checklist ကို ပြန်ပြင်ရန် လိုနေသည်",
+  "yc_edit_record": "မှတ်တမ်းပြင်ဆင်ရန်",
+  "yc_confirm_mark_out_title": "ထွက်ကြောင်း အတည်ပြုရန်",
+  "yc_confirm_mark_out_body": "ဤမှတ်တမ်းသည် ယာဒ်မှ ထွက်သွားပြီဟု အတည်ပြုပါသလား?",
 
   "guide_import_title": "ကုန်ချ လမ်းညွှန် (Import)",
   "guide_import_subtitle": "စက်ရုံအတွင်း ကုန်ချရန် ဝင်ရောက်သော ယာဉ်မောင်းများအတွက် လမ်းညွှန်",

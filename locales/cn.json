@@ -277,6 +277,9 @@
   "yc_range_7d": "7天",
   "yc_range_all": "全部",
   "yc_already_out_hint": "已离场，但检查清单仍需修正",
+  "yc_edit_record": "编辑记录",
+  "yc_confirm_mark_out_title": "确认离场",
+  "yc_confirm_mark_out_body": "确认此记录已离开场地？",
 
   "guide_import_title": "进口卸货指南",
   "guide_import_subtitle": "司机进入工厂卸货的操作流程指南",
