@@ -224,6 +224,7 @@
   "yc_status_out": "Out",
   "yc_mark_out": "Mark OUT",
   "yc_inspect": "Inspect",
+  "yc_awaiting_inspection": "Pending",
   "yc_reinspect": "Re-inspect",
   "yc_checklist_title": "Checklist",
   "yc_checklist_item_1": "Light test — no leak",

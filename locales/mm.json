@@ -224,6 +224,7 @@
   "yc_status_out": "ထွက်သွားပြီး",
   "yc_mark_out": "ထွက်ကြောင်းမှတ်သားရန်",
   "yc_inspect": "စစ်ဆေးရန်",
+  "yc_awaiting_inspection": "စစ်ဆေးရန် စောင့်ဆိုင်းဆဲ",
   "yc_reinspect": "ပြန်လည်စစ်ဆေးရန်",
   "yc_checklist_title": "စစ်ဆေးစာရင်း",
   "yc_checklist_item_1": "အလင်းစစ် — ယိုစိမ့်မှုမရှိ",

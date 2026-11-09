@@ -224,6 +224,7 @@
   "yc_status_out": "已离场",
   "yc_mark_out": "标记离场",
   "yc_inspect": "检查",
+  "yc_awaiting_inspection": "待检查",
   "yc_reinspect": "重新检查",
   "yc_checklist_title": "检查清单",
   "yc_checklist_item_1": "漏光测试",

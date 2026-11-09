@@ -44,8 +44,8 @@ function YardCheckSummaryContent() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilters, setTypeFilters] = useState<Set<YardCheckType>>(new Set());
-  const [emptyStatusFilter, setEmptyStatusFilter] = useState<'passed' | 'not_passed' | null>(null);
   const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
+  const [inStatusFilter, setInStatusFilter] = useState<'passed' | 'not_passed' | 'pending' | 'reinspect' | null>(null);
   const [outRange, setOutRange] = useState<'24h' | '7d' | 'all'>('24h');
   const [actionCheck, setActionCheck] = useState<YardCheck | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -81,33 +81,34 @@ function YardCheckSummaryContent() {
     });
   };
 
-  // Clicking Passed/Not Passed under the Empty card narrows straight to that
-  // subset (and pins the type filter to Empty, since the split only means
-  // anything there); clicking the same one again clears back to all Empty.
-  const toggleEmptyStatusFilter = (status: 'passed' | 'not_passed') => {
-    if (emptyStatusFilter === status) {
-      setEmptyStatusFilter(null);
-    } else {
-      setEmptyStatusFilter(status);
-      setTypeFilters(new Set(['empty']));
-    }
+  // Clicking an already-active status pill clears it back to "all" instead of
+  // forcing one to always be selected.
+  const toggleInStatusFilter = (status: 'passed' | 'not_passed' | 'pending' | 'reinspect') => {
+    setInStatusFilter((prev) => (prev === status ? null : status));
   };
 
   const matchesFilters = useCallback((c: YardCheck) => {
     if (typeFilters.size > 0 && !typeFilters.has(c.type)) return false;
-    if (emptyStatusFilter) {
-      if (c.type !== 'empty') return false;
-      const disp = getYardEmptyDisplayStatus(c);
-      if (emptyStatusFilter === 'passed' && disp !== 'passed') return false;
-      if (emptyStatusFilter === 'not_passed' && disp === 'passed') return false;
-    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hay = `${c.container_no || ''} ${c.chassis_plate}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
-  }, [typeFilters, emptyStatusFilter, searchQuery]);
+  }, [typeFilters, searchQuery]);
+
+  // Inspection-status pills (Passed / Not Passed / Pending / Re-inspect) only make
+  // sense for empty containers, and only narrow the IN tab — OUT keeps its own
+  // 24h/7d/all range filter independent of this.
+  const matchesInStatus = useCallback((c: YardCheck) => {
+    if (!inStatusFilter) return true;
+    if (c.type !== 'empty') return false;
+    const disp = getYardEmptyDisplayStatus(c);
+    if (inStatusFilter === 'passed') return disp === 'passed';
+    if (inStatusFilter === 'not_passed') return disp !== 'passed';
+    if (inStatusFilter === 'pending') return disp === 'created';
+    return disp === 'failed'; // 'reinspect'
+  }, [inStatusFilter]);
 
   // A record still needs action if it's physically in the yard (needs mark-out), or
   // if it's an empty container whose checklist isn't passed yet — even if it already
@@ -118,8 +119,8 @@ function YardCheckSummaryContent() {
   }, []);
 
   const inYard = useMemo(
-    () => checks.filter((c) => needsAction(c) && matchesFilters(c)),
-    [checks, matchesFilters, needsAction]
+    () => checks.filter((c) => needsAction(c) && matchesFilters(c) && matchesInStatus(c)),
+    [checks, matchesFilters, matchesInStatus, needsAction]
   );
 
   const outList = useMemo(() => {
@@ -271,7 +272,7 @@ function YardCheckSummaryContent() {
               onClick={() => { setInitialInspect(c); setModalMode('update'); setModalOpen(true); }}
               className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-amber-500 text-white font-medium"
             >
-              {hasNg ? t('yc_reinspect') : t('yc_inspect')}
+              {hasNg ? t('yc_reinspect') : t('yc_awaiting_inspection')}
             </button>
           ) : (
             <button
@@ -294,36 +295,25 @@ function YardCheckSummaryContent() {
         {/* Stat cards (also act as type filter toggles) */}
         <div className="px-3 pt-2.5 pb-2.5">
           <div className="grid grid-cols-3 gap-2">
-            <div
+            <button
+              onClick={() => toggleTypeFilter('empty')}
               className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('empty') ? 'border-amber-500 bg-amber-100 ring-2 ring-amber-300' : 'border-amber-200 bg-amber-50'
               }`}
             >
-              <button onClick={() => { toggleTypeFilter('empty'); setEmptyStatusFilter(null); }} className="text-left">
-                <div className="text-[10px] font-semibold text-amber-700 mb-1">{t('yc_type_empty').toUpperCase()}</div>
-                <div className="text-2xl font-bold text-amber-900 leading-none">{stats.emptyTotal}</div>
-              </button>
+              <div className="text-[10px] font-semibold text-amber-700 mb-1">{t('yc_type_empty').toUpperCase()}</div>
+              <div className="text-2xl font-bold text-amber-900 leading-none">{stats.emptyTotal}</div>
               <div className="mt-1.5 space-y-0.5">
-                <button
-                  onClick={() => toggleEmptyStatusFilter('passed')}
-                  className={`flex items-center gap-1 text-[10px] text-emerald-700 rounded px-1 -mx-1 ${
-                    emptyStatusFilter === 'passed' ? 'bg-emerald-200 font-bold' : ''
-                  }`}
-                >
+                <div className="flex items-center gap-1 text-[10px] text-emerald-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t('yc_passed')} {stats.emptyPassed}
-                </button>
-                <button
-                  onClick={() => toggleEmptyStatusFilter('not_passed')}
-                  className={`flex items-center gap-1 text-[10px] text-red-600 font-medium rounded px-1 -mx-1 ${
-                    emptyStatusFilter === 'not_passed' ? 'bg-red-200' : ''
-                  }`}
-                >
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />{t('yc_not_passed')} {stats.emptyNotPassed}
-                </button>
+                </div>
               </div>
-            </div>
+            </button>
             <button
-              onClick={() => { toggleTypeFilter('laden'); setEmptyStatusFilter(null); }}
+              onClick={() => toggleTypeFilter('laden')}
               className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('laden') ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' : 'border-blue-200 bg-blue-50'
               }`}
@@ -332,7 +322,7 @@ function YardCheckSummaryContent() {
               <div className="text-2xl font-bold text-blue-900 leading-none">{stats.ladenTotal}</div>
             </button>
             <button
-              onClick={() => { toggleTypeFilter('chassis'); setEmptyStatusFilter(null); }}
+              onClick={() => toggleTypeFilter('chassis')}
               className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('chassis') ? 'border-violet-500 bg-violet-100 ring-2 ring-violet-300' : 'border-violet-200 bg-violet-50'
               }`}
@@ -388,6 +378,27 @@ function YardCheckSummaryContent() {
                 }`}
               >
                 {t(`yc_range_${r}`)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'in' && (
+          <div className="flex px-3 pb-2.5 gap-1.5 flex-wrap">
+            {([
+              { key: 'passed', label: t('yc_passed') },
+              { key: 'not_passed', label: t('yc_not_passed') },
+              { key: 'pending', label: t('yc_awaiting_inspection') },
+              { key: 'reinspect', label: t('yc_reinspect') },
+            ] as const).map((f) => (
+              <button
+                key={f.key}
+                onClick={() => toggleInStatusFilter(f.key)}
+                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                  inStatusFilter === f.key ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {f.label}
               </button>
             ))}
           </div>

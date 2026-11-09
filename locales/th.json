@@ -224,6 +224,7 @@
   "yc_status_out": "ออกแล้ว",
   "yc_mark_out": "แจ้งออก",
   "yc_inspect": "ตรวจสอบ",
+  "yc_awaiting_inspection": "รอตรวจสอบ",
   "yc_reinspect": "ตรวจซ้ำ",
   "yc_checklist_title": "รายการตรวจ",
   "yc_checklist_item_1": "ไม่รั่ว (ทดสอบด้วยแสง)",
