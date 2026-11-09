@@ -97,15 +97,18 @@ function YardCheckSummaryContent() {
     return true;
   }, [typeFilters, searchQuery]);
 
-  // Inspection-status pills (Passed / Not Passed / Pending / Re-inspect) only make
-  // sense for empty containers, and only narrow the IN tab — OUT keeps its own
-  // 24h/7d/all range filter independent of this.
+  // Inspection-status pills (Passed / Not Passed / Pending) only make sense for
+  // empty containers, and only narrow the IN tab — OUT keeps its own 24h/7d/all
+  // range filter independent of this. Not Passed means "checked and failed",
+  // distinct from Pending ("never checked yet") - they used to be lumped
+  // together under Not Passed, which misrepresented untouched containers as
+  // having failed an inspection they hadn't had yet.
   const matchesInStatus = useCallback((c: YardCheck) => {
     if (!inStatusFilter) return true;
     if (c.type !== 'empty') return false;
     const disp = getYardEmptyDisplayStatus(c);
     if (inStatusFilter === 'passed') return disp === 'passed';
-    if (inStatusFilter === 'not_passed') return disp !== 'passed';
+    if (inStatusFilter === 'not_passed') return disp === 'failed';
     return disp === 'created'; // 'pending'
   }, [inStatusFilter]);
 
@@ -141,7 +144,8 @@ function YardCheckSummaryContent() {
     return {
       emptyTotal: emptyAction.length,
       emptyPassed: emptyAction.filter((c) => getYardEmptyDisplayStatus(c) === 'passed').length,
-      emptyNotPassed: emptyAction.filter((c) => getYardEmptyDisplayStatus(c) !== 'passed').length,
+      emptyPending: emptyAction.filter((c) => getYardEmptyDisplayStatus(c) === 'created').length,
+      emptyNotPassed: emptyAction.filter((c) => getYardEmptyDisplayStatus(c) === 'failed').length,
       ladenTotal: ladenAction.length,
       chassisTotal: chassisAction.length,
     };
@@ -310,6 +314,9 @@ function YardCheckSummaryContent() {
               <div className="mt-1.5 space-y-0.5">
                 <div className="flex items-center gap-1 text-[10px] text-emerald-700">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t('yc_passed')} {stats.emptyPassed}
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-amber-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />{t('yc_awaiting_inspection')} {stats.emptyPending}
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />{t('yc_not_passed')} {stats.emptyNotPassed}
