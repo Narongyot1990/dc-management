@@ -8,7 +8,6 @@ import { formatDateTimeRelative } from '@/utils/format';
 import { getYardEmptyDisplayStatus } from '@/utils/styles';
 import { useYardChecks } from '@/hooks';
 import { SearchInput, BottomSheet } from '@/components/ui';
-import { YARD_NAME } from '@/utils/constants';
 import { YardCheckModal, type YardCheckModalMode } from '@/components/yardcheck/YardCheckModal';
 import {
   ClipboardCheck,
@@ -17,10 +16,21 @@ import {
   Trash2,
   Pencil,
   Package,
-  Truck,
   Plus,
-  RefreshCw,
+  ScanLine,
 } from 'lucide-react';
+
+// Lucide has no "license plate" glyph — a small plate-shaped rect reads clearer
+// than the Truck icon, which people mistake for "this is a tractor unit" rather
+// than the chassis's own registration number.
+function PlateIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <line x1="6" y1="14" x2="18" y2="14" />
+    </svg>
+  );
+}
 
 export default function YardCheckSummaryPage() {
   return (
@@ -164,6 +174,15 @@ function YardCheckSummaryContent() {
     return 'bg-violet-100 text-violet-800';
   };
 
+  // Size badge follows the record's type color; container no. always uses one
+  // consistent accent so it reads as "the same kind of field" across every row.
+  const getSizeBadgeClass = (type: YardCheckType) => {
+    if (type === 'empty') return 'bg-amber-50 text-amber-700';
+    if (type === 'laden') return 'bg-blue-50 text-blue-700';
+    return 'bg-violet-50 text-violet-700';
+  };
+  const CONTAINER_NO_CLASS = 'text-indigo-600';
+
   const getCardBorder = (c: YardCheck) => {
     if (c.type === 'empty') {
       const disp = getYardEmptyDisplayStatus(c);
@@ -186,12 +205,13 @@ function YardCheckSummaryContent() {
             <span className={`text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded shrink-0 ${getTypeBadgeClass(c.type)}`}>
               {t(`yc_type_${c.type}`).toUpperCase()}
             </span>
-            <span className="font-mono text-sm font-semibold text-gray-900 truncate flex items-center gap-0.5">
-              <Truck className="w-3.5 h-3.5 text-gray-400 shrink-0" />{c.chassis_plate}
+            <span className="font-mono text-sm font-semibold text-gray-900 flex items-center gap-1 w-[94px] shrink-0">
+              <PlateIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <span className="tabular-nums truncate">{c.chassis_plate}</span>
             </span>
-            {c.size && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 font-medium text-gray-600 shrink-0">{c.size}</span>}
+            {c.size && <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getSizeBadgeClass(c.type)}`}>{c.size}</span>}
             {c.container_no && (
-              <span className="text-[10px] text-gray-400 truncate shrink-0">{c.container_no}</span>
+              <span className={`text-[10px] font-medium truncate shrink-0 ${CONTAINER_NO_CLASS}`}>{c.container_no}</span>
             )}
             {c.type === 'chassis' && <span className="text-[10px] text-gray-400">{t('yc_no_container')}</span>}
             {c.yard_status === 'out' && (
@@ -232,7 +252,7 @@ function YardCheckSummaryContent() {
           {disp && disp !== 'passed' ? (
             <button
               onClick={() => { setInitialInspect(c); setModalMode('update'); setModalOpen(true); }}
-              className="shrink-0 text-[10px] px-2.5 py-1 rounded-md bg-amber-500 text-white font-medium"
+              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-amber-500 text-white font-medium"
             >
               {hasNg ? t('yc_reinspect') : t('yc_inspect')}
             </button>
@@ -240,7 +260,7 @@ function YardCheckSummaryContent() {
             <button
               onClick={() => setMarkOutCheck(c)}
               disabled={actionLoading}
-              className="shrink-0 text-[10px] px-2.5 py-1 rounded-md bg-gray-800 text-white font-medium disabled:opacity-50"
+              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-gray-800 text-white font-medium disabled:opacity-50"
             >
               {t('yc_mark_out')}
             </button>
@@ -258,7 +278,6 @@ function YardCheckSummaryContent() {
           <h1 className="text-base font-semibold text-text-primary flex items-center gap-2">
             <ClipboardCheck className="w-5 h-5 text-amber-600" />
             {t('yc_summary')}
-            <span className="text-[10px] text-gray-400 font-normal">{YARD_NAME}</span>
           </h1>
         </div>
 
@@ -267,22 +286,24 @@ function YardCheckSummaryContent() {
           <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => toggleTypeFilter('empty')}
-              className={`text-left rounded-xl border p-2.5 transition-all ${
+              className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('empty') ? 'border-amber-500 bg-amber-100 ring-2 ring-amber-300' : 'border-amber-200 bg-amber-50'
               }`}
             >
               <div className="text-[10px] font-semibold text-amber-700 mb-1">{t('yc_type_empty').toUpperCase()}</div>
-              <div className="text-2xl font-bold text-amber-900 leading-none mb-1.5">{stats.emptyTotal}</div>
-              <div className="flex items-center gap-1 text-[10px] text-emerald-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t('yc_passed')} {stats.emptyPassed}
-              </div>
-              <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />{t('yc_not_passed')} {stats.emptyNotPassed}
+              <div className="text-2xl font-bold text-amber-900 leading-none">{stats.emptyTotal}</div>
+              <div className="mt-1.5 space-y-0.5">
+                <div className="flex items-center gap-1 text-[10px] text-emerald-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t('yc_passed')} {stats.emptyPassed}
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />{t('yc_not_passed')} {stats.emptyNotPassed}
+                </div>
               </div>
             </button>
             <button
               onClick={() => toggleTypeFilter('laden')}
-              className={`text-left rounded-xl border p-2.5 transition-all ${
+              className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('laden') ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' : 'border-blue-200 bg-blue-50'
               }`}
             >
@@ -291,7 +312,7 @@ function YardCheckSummaryContent() {
             </button>
             <button
               onClick={() => toggleTypeFilter('chassis')}
-              className={`text-left rounded-xl border p-2.5 transition-all ${
+              className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('chassis') ? 'border-violet-500 bg-violet-100 ring-2 ring-violet-300' : 'border-violet-200 bg-violet-50'
               }`}
             >
@@ -315,10 +336,10 @@ function YardCheckSummaryContent() {
           </div>
           <button
             onClick={() => openModal('update')}
-            className="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
+            title={t('yc_mode_update')}
+            className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-amber-600" />
-            {t('yc_mode_update')}
+            <ScanLine className="w-4 h-4 text-amber-600" />
           </button>
         </div>
 
@@ -386,10 +407,11 @@ function YardCheckSummaryContent() {
                 <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
                   {t(`yc_type_${c.type}`)}
                 </span>
-                <span className="font-mono font-medium text-gray-700 truncate flex-1 flex items-center gap-1">
-                  <Truck className="w-3 h-3 text-gray-400 shrink-0" />{c.chassis_plate}
-                  {c.container_no && <span className="text-gray-400 font-normal truncate">· {c.container_no}</span>}
+                <span className="font-mono font-medium text-gray-700 flex items-center gap-1 w-[94px] shrink-0">
+                  <PlateIcon className="w-3 h-3 text-gray-400 shrink-0" />
+                  <span className="tabular-nums truncate">{c.chassis_plate}</span>
                 </span>
+                <span className={`truncate flex-1 font-mono font-medium ${CONTAINER_NO_CLASS}`}>{c.container_no || ''}</span>
                 <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
                 <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
               </div>
@@ -448,10 +470,13 @@ function YardCheckSummaryContent() {
 
       {/* Mark OUT confirm */}
       {markOutCheck && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-4 max-w-sm w-full">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setMarkOutCheck(null)}
+        >
+          <div className="bg-white rounded-xl p-4 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm font-medium text-gray-800 mb-1 flex items-center gap-2">
-              <Truck className="w-4 h-4 text-gray-700" />
+              <PlateIcon className="w-4 h-4 text-gray-700" />
               {markOutCheck.chassis_plate}{markOutCheck.container_no ? ` · ${markOutCheck.container_no}` : ''}
             </p>
             <p className="text-xs text-gray-500 mb-4">{t('yc_confirm_mark_out_body')}</p>
@@ -469,8 +494,11 @@ function YardCheckSummaryContent() {
 
       {/* Delete confirm */}
       {showDeleteModal && deletingCheck && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-4 max-w-sm w-full">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div className="bg-white rounded-xl p-4 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <p className="text-sm font-medium text-gray-800 mb-1 flex items-center gap-2">
               <Package className="w-4 h-4 text-red-500" />
               {deletingCheck.container_no || deletingCheck.chassis_plate}
