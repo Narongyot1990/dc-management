@@ -183,7 +183,7 @@
   "cc_status_departed": "Departed",
   "cc_select_dock": "Select Dock",
   "cc_confirm": "Confirm",
-  "cc_cancel": "Reset",
+  "cc_cancel": "Cancel",
   "cc_save_success": "Container check saved successfully",
   "cc_updated_success": "Container check updated successfully",
   "cc_container_no": "Container No",

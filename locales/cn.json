@@ -183,7 +183,7 @@
   "cc_status_departed": "已离场",
   "cc_select_dock": "选择码头",
   "cc_confirm": "确认",
-  "cc_cancel": "重置",
+  "cc_cancel": "取消",
   "cc_save_success": "保存成功",
   "cc_updated_success": "集装箱检查更新成功",
   "cc_container_no": "集装箱号",

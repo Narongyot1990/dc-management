@@ -10,8 +10,6 @@ import { useYardChecks } from '@/hooks';
 import { SearchInput, BottomSheet } from '@/components/ui';
 import { YardCheckModal, type YardCheckModalMode } from '@/components/yardcheck/YardCheckModal';
 import {
-  ClipboardCheck,
-  AlertCircle,
   MoreVertical,
   Trash2,
   Pencil,
@@ -46,6 +44,7 @@ function YardCheckSummaryContent() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilters, setTypeFilters] = useState<Set<YardCheckType>>(new Set());
+  const [emptyStatusFilter, setEmptyStatusFilter] = useState<'passed' | 'not_passed' | null>(null);
   const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
   const [outRange, setOutRange] = useState<'24h' | '7d' | 'all'>('24h');
   const [actionCheck, setActionCheck] = useState<YardCheck | null>(null);
@@ -82,15 +81,33 @@ function YardCheckSummaryContent() {
     });
   };
 
+  // Clicking Passed/Not Passed under the Empty card narrows straight to that
+  // subset (and pins the type filter to Empty, since the split only means
+  // anything there); clicking the same one again clears back to all Empty.
+  const toggleEmptyStatusFilter = (status: 'passed' | 'not_passed') => {
+    if (emptyStatusFilter === status) {
+      setEmptyStatusFilter(null);
+    } else {
+      setEmptyStatusFilter(status);
+      setTypeFilters(new Set(['empty']));
+    }
+  };
+
   const matchesFilters = useCallback((c: YardCheck) => {
     if (typeFilters.size > 0 && !typeFilters.has(c.type)) return false;
+    if (emptyStatusFilter) {
+      if (c.type !== 'empty') return false;
+      const disp = getYardEmptyDisplayStatus(c);
+      if (emptyStatusFilter === 'passed' && disp !== 'passed') return false;
+      if (emptyStatusFilter === 'not_passed' && disp === 'passed') return false;
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hay = `${c.container_no || ''} ${c.chassis_plate}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
-  }, [typeFilters, searchQuery]);
+  }, [typeFilters, emptyStatusFilter, searchQuery]);
 
   // A record still needs action if it's physically in the yard (needs mark-out), or
   // if it's an empty container whose checklist isn't passed yet — even if it already
@@ -274,35 +291,39 @@ function YardCheckSummaryContent() {
     <div className="flex flex-col overflow-hidden bg-background h-[calc(100vh-80px)] relative">
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-border">
-        <div className="flex items-center justify-between px-3 py-2.5">
-          <h1 className="text-base font-semibold text-text-primary flex items-center gap-2">
-            <ClipboardCheck className="w-5 h-5 text-amber-600" />
-            {t('yc_summary')}
-          </h1>
-        </div>
-
         {/* Stat cards (also act as type filter toggles) */}
-        <div className="px-3 pb-2.5">
+        <div className="px-3 pt-2.5 pb-2.5">
           <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => toggleTypeFilter('empty')}
+            <div
               className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('empty') ? 'border-amber-500 bg-amber-100 ring-2 ring-amber-300' : 'border-amber-200 bg-amber-50'
               }`}
             >
-              <div className="text-[10px] font-semibold text-amber-700 mb-1">{t('yc_type_empty').toUpperCase()}</div>
-              <div className="text-2xl font-bold text-amber-900 leading-none">{stats.emptyTotal}</div>
+              <button onClick={() => { toggleTypeFilter('empty'); setEmptyStatusFilter(null); }} className="text-left">
+                <div className="text-[10px] font-semibold text-amber-700 mb-1">{t('yc_type_empty').toUpperCase()}</div>
+                <div className="text-2xl font-bold text-amber-900 leading-none">{stats.emptyTotal}</div>
+              </button>
               <div className="mt-1.5 space-y-0.5">
-                <div className="flex items-center gap-1 text-[10px] text-emerald-700">
+                <button
+                  onClick={() => toggleEmptyStatusFilter('passed')}
+                  className={`flex items-center gap-1 text-[10px] text-emerald-700 rounded px-1 -mx-1 ${
+                    emptyStatusFilter === 'passed' ? 'bg-emerald-200 font-bold' : ''
+                  }`}
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t('yc_passed')} {stats.emptyPassed}
-                </div>
-                <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium">
+                </button>
+                <button
+                  onClick={() => toggleEmptyStatusFilter('not_passed')}
+                  className={`flex items-center gap-1 text-[10px] text-red-600 font-medium rounded px-1 -mx-1 ${
+                    emptyStatusFilter === 'not_passed' ? 'bg-red-200' : ''
+                  }`}
+                >
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />{t('yc_not_passed')} {stats.emptyNotPassed}
-                </div>
+                </button>
               </div>
-            </button>
+            </div>
             <button
-              onClick={() => toggleTypeFilter('laden')}
+              onClick={() => { toggleTypeFilter('laden'); setEmptyStatusFilter(null); }}
               className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('laden') ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' : 'border-blue-200 bg-blue-50'
               }`}
@@ -311,7 +332,7 @@ function YardCheckSummaryContent() {
               <div className="text-2xl font-bold text-blue-900 leading-none">{stats.ladenTotal}</div>
             </button>
             <button
-              onClick={() => toggleTypeFilter('chassis')}
+              onClick={() => { toggleTypeFilter('chassis'); setEmptyStatusFilter(null); }}
               className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
                 typeFilters.has('chassis') ? 'border-violet-500 bg-violet-100 ring-2 ring-violet-300' : 'border-violet-200 bg-violet-50'
               }`}
@@ -320,13 +341,6 @@ function YardCheckSummaryContent() {
               <div className="text-2xl font-bold text-violet-900 leading-none">{stats.chassisTotal}</div>
             </button>
           </div>
-
-          {stats.emptyNotPassed > 0 && (
-            <div className="mt-2 flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 rounded-lg px-2.5 py-1.5 text-[11px] font-medium">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              {stats.emptyNotPassed} {t('yc_awaiting_checklist')}
-            </div>
-          )}
         </div>
 
         {/* Search + Update */}
