@@ -45,7 +45,7 @@ function YardCheckSummaryContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilters, setTypeFilters] = useState<Set<YardCheckType>>(new Set());
   const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
-  const [inStatusFilter, setInStatusFilter] = useState<'passed' | 'not_passed' | 'pending' | 'reinspect' | null>(null);
+  const [inStatusFilter, setInStatusFilter] = useState<'passed' | 'not_passed' | 'pending' | null>(null);
   const [outRange, setOutRange] = useState<'24h' | '7d' | 'all'>('24h');
   const [actionCheck, setActionCheck] = useState<YardCheck | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -83,7 +83,7 @@ function YardCheckSummaryContent() {
 
   // Clicking an already-active status pill clears it back to "all" instead of
   // forcing one to always be selected.
-  const toggleInStatusFilter = (status: 'passed' | 'not_passed' | 'pending' | 'reinspect') => {
+  const toggleInStatusFilter = (status: 'passed' | 'not_passed' | 'pending') => {
     setInStatusFilter((prev) => (prev === status ? null : status));
   };
 
@@ -106,8 +106,7 @@ function YardCheckSummaryContent() {
     const disp = getYardEmptyDisplayStatus(c);
     if (inStatusFilter === 'passed') return disp === 'passed';
     if (inStatusFilter === 'not_passed') return disp !== 'passed';
-    if (inStatusFilter === 'pending') return disp === 'created';
-    return disp === 'failed'; // 'reinspect'
+    return disp === 'created'; // 'pending'
   }, [inStatusFilter]);
 
   // A record still needs action if it's physically in the yard (needs mark-out), or
@@ -389,7 +388,6 @@ function YardCheckSummaryContent() {
               { key: 'passed', label: t('yc_passed') },
               { key: 'not_passed', label: t('yc_not_passed') },
               { key: 'pending', label: t('yc_awaiting_inspection') },
-              { key: 'reinspect', label: t('yc_reinspect') },
             ] as const).map((f) => (
               <button
                 key={f.key}
