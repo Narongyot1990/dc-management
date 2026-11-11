@@ -347,7 +347,9 @@ function YardCheckSummaryContent() {
           {disp && disp !== 'passed' ? (
             <button
               onClick={() => { setInitialInspect(c); setModalMode('update'); setModalOpen(true); }}
-              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-amber-500 text-white font-medium"
+              className={`shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md text-white font-medium ${
+                hasNg ? 'bg-amber-600' : 'bg-blue-600'
+              }`}
             >
               {hasNg ? t('yc_reinspect') : t('yc_awaiting_inspection')}
             </button>
@@ -355,7 +357,7 @@ function YardCheckSummaryContent() {
             <button
               onClick={() => setMarkOutCheck(c)}
               disabled={actionLoading}
-              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-amber-600 text-white font-medium disabled:opacity-50"
+              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-slate-700 text-white font-medium disabled:opacity-50"
             >
               {t('yc_mark_out')}
             </button>
@@ -604,7 +606,7 @@ function YardCheckSummaryContent() {
               <button type="button" onClick={cancelMarkOut} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
                 {t('cc_cancel')}
               </button>
-              <button type="button" onClick={confirmMarkOut} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-amber-600 text-white disabled:opacity-50">
+              <button type="button" onClick={confirmMarkOut} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-slate-700 text-white disabled:opacity-50">
                 {actionLoading ? '...' : t('yc_mark_out')}
               </button>
             </div>

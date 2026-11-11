@@ -21,30 +21,39 @@ import {
   Camera,
 } from 'lucide-react';
 
-// Shrinks a photo to a small JPEG data URL before it's stored on the checklist
-// item - keeps a few photos per inspection well inside MongoDB's 16MB document
-// cap without needing an external object store.
-async function resizeImageToDataUrl(file: File, maxDim = 800, quality = 0.6): Promise<string> {
-  const dataUrl: string = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = reject;
-    image.src = dataUrl;
-  });
-  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(img.width * scale);
-  canvas.height = Math.round(img.height * scale);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return dataUrl;
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL('image/jpeg', quality);
+// Shrinks a photo client-side before it's uploaded to Vercel Blob, so a raw
+// phone-camera photo (several MB) doesn't get uploaded as-is.
+async function resizeImageToBlob(file: File, maxDim = 1000, quality = 0.7): Promise<Blob> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = objectUrl;
+    });
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/jpeg', quality);
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+// Uploads a resized photo to Vercel Blob and returns its public URL.
+async function uploadPhoto(blob: Blob): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', blob, `photo-${Date.now()}.jpg`);
+  const res = await fetch('/api/yard-check/upload-photo', { method: 'POST', body: formData });
+  const data = await res.json();
+  if (!data.success || !data.url) throw new Error(data.error || 'Upload failed');
+  return data.url as string;
 }
 
 export type YardCheckModalMode = 'update' | 'create';
@@ -92,6 +101,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   const [checklist, setChecklist] = useState<YardCheckChecklistItem[]>(emptyChecklist);
   const [ngDetail, setNgDetail] = useState('');
   const [viewOnly, setViewOnly] = useState(false);
+  const [uploadingItem, setUploadingItem] = useState<number | null>(null);
 
   const [editingRecord, setEditingRecord] = useState<YardCheck | null>(null);
   const [editFormData, setEditFormData] = useState(initialFormData);
@@ -285,8 +295,17 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
 
   const handlePhotoSelect = async (item: number, file?: File) => {
     if (!file) return;
-    const dataUrl = await resizeImageToDataUrl(file);
-    setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, photos: [...(c.photos || []), dataUrl].slice(0, 3) } : c)));
+    setUploadingItem(item);
+    try {
+      const resized = await resizeImageToBlob(file);
+      const url = await uploadPhoto(resized);
+      setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, photos: [...(c.photos || []), url].slice(0, 3) } : c)));
+    } catch (error) {
+      console.error(error);
+      alert('Failed to upload photo');
+    } finally {
+      setUploadingItem(null);
+    }
   };
 
   const removePhoto = (item: number, idx: number) => {
@@ -503,7 +522,12 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                             </button>
                           </div>
                         ))}
-                        {(current.photos?.length || 0) < 3 && (
+                        {uploadingItem === def.item && (
+                          <div className="w-14 h-14 rounded-lg border-2 border-dashed border-red-300 flex items-center justify-center text-red-400">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          </div>
+                        )}
+                        {(current.photos?.length || 0) < 3 && uploadingItem !== def.item && (
                           <label className="w-14 h-14 rounded-lg border-2 border-dashed border-red-300 flex items-center justify-center text-red-400 cursor-pointer hover:bg-red-50">
                             <Camera className="w-5 h-5" />
                             <input
@@ -578,7 +602,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                 )}
                 <button
                   onClick={handleSubmitChecklist}
-                  disabled={!canSubmitChecklist || loading}
+                  disabled={!canSubmitChecklist || loading || uploadingItem !== null}
                   className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5"
                 >
                   {loading ? '...' : t('yc_submit_inspection')}
@@ -773,18 +797,23 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                         })()}
                       </div>
                       <div className="flex gap-2 px-3 pb-3">
-                        {foundRecord.type === 'empty' && getYardEmptyDisplayStatus(foundRecord) !== 'passed' ? (
-                          <button
-                            onClick={() => startInspecting(foundRecord)}
-                            className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium"
-                          >
-                            {t('yc_inspect')}
-                          </button>
-                        ) : foundRecord.yard_status === 'in' ? (
+                        {foundRecord.type === 'empty' && getYardEmptyDisplayStatus(foundRecord) !== 'passed' ? (() => {
+                          const isReinspect = getYardEmptyDisplayStatus(foundRecord) === 'failed';
+                          return (
+                            <button
+                              onClick={() => startInspecting(foundRecord)}
+                              className={`flex-1 py-2.5 text-white rounded-lg text-sm font-medium ${
+                                isReinspect ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'
+                              }`}
+                            >
+                              {isReinspect ? t('yc_reinspect') : t('yc_inspect')}
+                            </button>
+                          );
+                        })() : foundRecord.yard_status === 'in' ? (
                           <button
                             onClick={handleMarkOut}
                             disabled={loading}
-                            className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2.5 bg-slate-700 hover:bg-slate-800 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
                           >
                             <Truck className="w-4 h-4" />
                             {loading ? '...' : t('yc_mark_out')}
