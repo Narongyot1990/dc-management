@@ -3,6 +3,7 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { YardCheck, YardCheckType, YardCheckSize, YardCheckChecklistItem, ContainerScanResult } from '@/types';
+import { InspectionPhotos } from './InspectionPhotos';
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
 import { YARD_SIZES, YARD_CHECKLIST, YARD_NAME } from '@/utils/constants';
 import { getYardEmptyDisplayStatus } from '@/utils/styles';
@@ -18,7 +19,6 @@ import {
   Truck,
   ClipboardCheck,
   Clock,
-  Camera,
 } from 'lucide-react';
 
 // Shrinks a photo client-side before it's uploaded to Vercel Blob, so a raw
@@ -37,7 +37,8 @@ async function resizeImageToBlob(file: File, maxDim = 1000, quality = 0.7): Prom
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
     const ctx = canvas.getContext('2d');
-    if (ctx) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    if (!ctx) throw new Error('Canvas unavailable');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     return await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/jpeg', quality);
     });
@@ -50,7 +51,7 @@ async function resizeImageToBlob(file: File, maxDim = 1000, quality = 0.7): Prom
 async function uploadPhoto(blob: Blob): Promise<string> {
   const formData = new FormData();
   formData.append('file', blob, `photo-${Date.now()}.jpg`);
-  const res = await fetch('/api/yard-check/upload-photo', { method: 'POST', body: formData });
+  const res = await fetch('/api/yard-check/upload-photo', { method: 'POST', body: formData, signal: AbortSignal.timeout(45000) });
   const data = await res.json();
   if (!data.success || !data.url) throw new Error(data.error || 'Upload failed');
   return data.url as string;
@@ -61,6 +62,8 @@ export type YardCheckModalMode = 'update' | 'create';
 interface YardCheckModalProps {
   isOpen: boolean;
   mode: YardCheckModalMode;
+  /** Search-field scan shortcut opens the camera immediately. */
+  startWithScanner?: boolean;
   onClose: () => void;
   onSaved: () => void;
   /** Open directly into the checklist for this record (e.g. deep link from summary). */
@@ -84,7 +87,7 @@ const initialFormData = {
 
 const emptyChecklist: YardCheckChecklistItem[] = [1, 2, 3, 4, 5].map((item) => ({ item: item as 1 | 2 | 3 | 4 | 5, result: null }));
 
-export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect, initialEdit, initialView }: YardCheckModalProps) {
+export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect, initialEdit, initialView, startWithScanner = false }: YardCheckModalProps) {
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>('form');
   const [type, setType] = useState<YardCheckType | ''>('');
@@ -102,6 +105,8 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   const [ngDetail, setNgDetail] = useState('');
   const [viewOnly, setViewOnly] = useState(false);
   const [uploadingItem, setUploadingItem] = useState<number | null>(null);
+  const photoUploadRef = useRef(false);
+  const [photoError, setPhotoError] = useState(false);
 
   const [editingRecord, setEditingRecord] = useState<YardCheck | null>(null);
   const [editFormData, setEditFormData] = useState(initialFormData);
@@ -138,6 +143,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
 
   useEffect(() => {
     if (!isOpen) return;
+    setShowScanner(startWithScanner);
     refreshCache();
     if (initialInspect) {
       setViewOnly(false);
@@ -165,7 +171,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
       resetAll();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialInspect, initialView, initialEdit, refreshCache]);
+  }, [isOpen, initialInspect, initialView, initialEdit, startWithScanner, refreshCache]);
 
   const lookupFromCache = useCallback((value: string) => {
     if (!value || value.length < 3 || !cacheReady) {
@@ -293,17 +299,27 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
     setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, result } : c)));
   };
 
-  const handlePhotoSelect = async (item: number, file?: File) => {
-    if (!file) return;
+  const handlePhotoSelect = async (item: number, file?: File, replaceIndex?: number) => {
+    if (!file || photoUploadRef.current) return;
+    photoUploadRef.current = true;
+    setPhotoError(false);
     setUploadingItem(item);
     try {
+      if (!file.type.startsWith('image/')) throw new Error('Invalid image');
       const resized = await resizeImageToBlob(file);
       const url = await uploadPhoto(resized);
-      setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, photos: [...(c.photos || []), url].slice(0, 3) } : c)));
+      setChecklist((prev) => prev.map((c) => {
+        if (c.item !== item) return c;
+        const photos = [...(c.photos || [])];
+        if (replaceIndex !== undefined && replaceIndex < photos.length) photos[replaceIndex] = url;
+        else if (photos.length < 3) photos.push(url);
+        return { ...c, photos };
+      }));
     } catch (error) {
       console.error(error);
-      alert('Failed to upload photo');
+      setPhotoError(true);
     } finally {
+      photoUploadRef.current = false;
       setUploadingItem(null);
     }
   };
@@ -318,7 +334,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   const checkedCount = checklist.filter((c) => c.result !== null).length;
 
   const handleSubmitChecklist = async () => {
-    if (!inspecting || !canSubmitChecklist) return;
+    if (!inspecting || !canSubmitChecklist || photoUploadRef.current) return;
     setLoading(true);
     try {
       const response = await fetch('/api/yard-check', {
@@ -340,6 +356,8 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   };
 
   const handleClose = () => {
+    if (photoUploadRef.current) return;
+    setPhotoError(false);
     resetAll();
     onClose();
   };
@@ -454,6 +472,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-3 p-4">
+              {photoError && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{t('yc_photo_upload_error')}</p>}
               {YARD_CHECKLIST.map((def) => {
                 const current = checklist.find((c) => c.item === def.item)!;
                 const isDone = current.result !== null;
@@ -508,49 +527,15 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                       </div>
                     )}
 
-                    {isFail && !viewOnly && (
-                      <div className="flex items-center gap-2 flex-wrap px-3 pb-3">
-                        {(current.photos || []).map((photo, idx) => (
-                          <div key={idx} className="relative w-14 h-14 rounded-lg overflow-hidden border border-red-200">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={photo} className="w-full h-full object-cover" alt="" />
-                            <button
-                              onClick={() => removePhoto(def.item, idx)}
-                              className="absolute top-0 right-0 bg-black/60 text-white rounded-bl-lg p-0.5"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                        {uploadingItem === def.item && (
-                          <div className="w-14 h-14 rounded-lg border-2 border-dashed border-red-300 flex items-center justify-center text-red-400">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                          </div>
-                        )}
-                        {(current.photos?.length || 0) < 3 && uploadingItem !== def.item && (
-                          <label className="w-14 h-14 rounded-lg border-2 border-dashed border-red-300 flex items-center justify-center text-red-400 cursor-pointer hover:bg-red-50">
-                            <Camera className="w-5 h-5" />
-                            <input
-                              type="file"
-                              accept="image/*"
-                              capture="environment"
-                              className="hidden"
-                              onChange={(e) => {
-                                handlePhotoSelect(def.item, e.target.files?.[0]);
-                                e.target.value = '';
-                              }}
-                            />
-                          </label>
-                        )}
-                      </div>
-                    )}
-                    {isFail && viewOnly && (current.photos?.length ?? 0) > 0 && (
-                      <div className="flex items-center gap-2 flex-wrap px-3 pb-3">
-                        {current.photos!.map((photo, idx) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img key={idx} src={photo} className="w-14 h-14 rounded-lg object-cover border border-gray-200" alt="" />
-                        ))}
-                      </div>
+                    {isFail && (
+                      <InspectionPhotos
+                        photos={current.photos || []}
+                        readOnly={viewOnly}
+                        busy={uploadingItem !== null || loading}
+                        uploading={uploadingItem === def.item}
+                        onSelect={(file, index) => handlePhotoSelect(def.item, file, index)}
+                        onRemove={(index) => removePhoto(def.item, index)}
+                      />
                     )}
                   </div>
                 );
@@ -964,3 +949,4 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
     </div>
   );
 }
+
