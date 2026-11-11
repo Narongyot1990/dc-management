@@ -281,6 +281,11 @@
   "yc_edit_record": "编辑记录",
   "yc_confirm_mark_out_title": "确认离场",
   "yc_confirm_mark_out_body": "确认此记录已离开场地？",
+  "yc_view_inspection": "检查历史记录",
+  "yc_inspected_at": "检查时间",
+  "yc_departed_at": "离场时间",
+  "yc_close": "关闭",
+  "yc_copy_yard_update": "复制场地更新",
 
   "guide_import_title": "进口卸货指南",
   "guide_import_subtitle": "司机进入工厂卸货的操作流程指南",

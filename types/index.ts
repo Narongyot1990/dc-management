@@ -122,6 +122,8 @@ export type YardCheckChecklistResult = 'pass' | 'fail' | null;
 export interface YardCheckChecklistItem {
   item: 1 | 2 | 3 | 4 | 5;
   result: YardCheckChecklistResult;
+  /** Up to 3 photos (data URLs) attached when this item is marked fail. */
+  photos?: string[];
 }
 
 export interface YardCheckHistory {

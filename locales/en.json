@@ -281,6 +281,11 @@
   "yc_edit_record": "Edit Record",
   "yc_confirm_mark_out_title": "Confirm Mark OUT",
   "yc_confirm_mark_out_body": "Confirm this record has left the yard?",
+  "yc_view_inspection": "Inspection History",
+  "yc_inspected_at": "Inspected",
+  "yc_departed_at": "Departed",
+  "yc_close": "Close",
+  "yc_copy_yard_update": "Copy Yard Update",
 
   "guide_import_title": "Import Guide",
   "guide_import_subtitle": "Step-by-step guide for drivers delivering goods to the facility",

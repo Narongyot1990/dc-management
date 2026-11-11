@@ -281,6 +281,11 @@
   "yc_edit_record": "แก้ไขข้อมูล",
   "yc_confirm_mark_out_title": "ยืนยันแจ้งออก",
   "yc_confirm_mark_out_body": "ยืนยันว่ารายการนี้ออกจากลานแล้ว?",
+  "yc_view_inspection": "ประวัติการตรวจ",
+  "yc_inspected_at": "ตรวจเมื่อ",
+  "yc_departed_at": "ออกจากลานเมื่อ",
+  "yc_close": "ปิด",
+  "yc_copy_yard_update": "คัดลอกสรุปลาน",
 
   "guide_import_title": "คู่มือลงสินค้า (Import)",
   "guide_import_subtitle": "ขั้นตอนการเข้ามาติดต่อเพื่อลงสินค้าภายในโรงงาน สำหรับพนักงานขับรถ",

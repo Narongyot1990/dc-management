@@ -6,6 +6,7 @@ import type { YardCheck, YardCheckType, YardCheckSize, YardCheckChecklistItem, C
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
 import { YARD_SIZES, YARD_CHECKLIST, YARD_NAME } from '@/utils/constants';
 import { getYardEmptyDisplayStatus } from '@/utils/styles';
+import { formatDateTimeRelative } from '@/utils/format';
 import {
   ScanLine,
   Package,
@@ -17,7 +18,34 @@ import {
   Truck,
   ClipboardCheck,
   Clock,
+  Camera,
 } from 'lucide-react';
+
+// Shrinks a photo to a small JPEG data URL before it's stored on the checklist
+// item - keeps a few photos per inspection well inside MongoDB's 16MB document
+// cap without needing an external object store.
+async function resizeImageToDataUrl(file: File, maxDim = 800, quality = 0.6): Promise<string> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = dataUrl;
+  });
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', quality);
+}
 
 export type YardCheckModalMode = 'update' | 'create';
 
@@ -30,6 +58,8 @@ interface YardCheckModalProps {
   initialInspect?: YardCheck | null;
   /** Open directly into the edit-fields form for this record (fix a typo, etc.). */
   initialEdit?: YardCheck | null;
+  /** Open the checklist in read-only mode, for reviewing a departed record's inspection history. */
+  initialView?: YardCheck | null;
 }
 
 type Step = 'form' | 'created_choice' | 'checklist' | 'edit';
@@ -45,7 +75,7 @@ const initialFormData = {
 
 const emptyChecklist: YardCheckChecklistItem[] = [1, 2, 3, 4, 5].map((item) => ({ item: item as 1 | 2 | 3 | 4 | 5, result: null }));
 
-export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect, initialEdit }: YardCheckModalProps) {
+export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect, initialEdit, initialView }: YardCheckModalProps) {
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>('form');
   const [type, setType] = useState<YardCheckType | ''>('');
@@ -61,6 +91,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   const [inspecting, setInspecting] = useState<YardCheck | null>(null);
   const [checklist, setChecklist] = useState<YardCheckChecklistItem[]>(emptyChecklist);
   const [ngDetail, setNgDetail] = useState('');
+  const [viewOnly, setViewOnly] = useState(false);
 
   const [editingRecord, setEditingRecord] = useState<YardCheck | null>(null);
   const [editFormData, setEditFormData] = useState(initialFormData);
@@ -90,6 +121,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
     setInspecting(null);
     setChecklist(emptyChecklist);
     setNgDetail('');
+    setViewOnly(false);
     setEditingRecord(null);
     setEditFormData(initialFormData);
   }, []);
@@ -98,9 +130,16 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
     if (!isOpen) return;
     refreshCache();
     if (initialInspect) {
+      setViewOnly(false);
       setInspecting(initialInspect);
       setChecklist(initialInspect.checklist && initialInspect.checklist.length === 5 ? initialInspect.checklist : emptyChecklist);
       setNgDetail(initialInspect.ng_detail || '');
+      setStep('checklist');
+    } else if (initialView) {
+      setViewOnly(true);
+      setInspecting(initialView);
+      setChecklist(initialView.checklist && initialView.checklist.length === 5 ? initialView.checklist : emptyChecklist);
+      setNgDetail(initialView.ng_detail || '');
       setStep('checklist');
     } else if (initialEdit) {
       setEditingRecord(initialEdit);
@@ -116,7 +155,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
       resetAll();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialInspect, initialEdit, refreshCache]);
+  }, [isOpen, initialInspect, initialView, initialEdit, refreshCache]);
 
   const lookupFromCache = useCallback((value: string) => {
     if (!value || value.length < 3 || !cacheReady) {
@@ -233,6 +272,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   };
 
   const startInspecting = useCallback((record: YardCheck) => {
+    setViewOnly(false);
     setInspecting(record);
     setChecklist(record.checklist && record.checklist.length === 5 ? record.checklist : emptyChecklist);
     setNgDetail(record.ng_detail || '');
@@ -241,6 +281,16 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
 
   const setResult = (item: number, result: 'pass' | 'fail') => {
     setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, result } : c)));
+  };
+
+  const handlePhotoSelect = async (item: number, file?: File) => {
+    if (!file) return;
+    const dataUrl = await resizeImageToDataUrl(file);
+    setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, photos: [...(c.photos || []), dataUrl].slice(0, 3) } : c)));
+  };
+
+  const removePhoto = (item: number, idx: number) => {
+    setChecklist((prev) => prev.map((c) => (c.item === item ? { ...c, photos: (c.photos || []).filter((_, i) => i !== idx) } : c)));
   };
 
   const allChecked = checklist.every((c) => c.result !== null);
@@ -360,14 +410,24 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
               <div>
                 <h1 className="text-base font-semibold text-text-primary flex items-center gap-2">
                   <ClipboardCheck className="w-5 h-5 text-amber-600" />
-                  {t('yc_form_title')}
+                  {viewOnly ? t('yc_view_inspection') : t('yc_form_title')}
                 </h1>
                 <p className="text-[11px] text-gray-400 mt-0.5 ml-7">
                   {YARD_NAME} · {inspecting.container_no} · {inspecting.size} · {inspecting.chassis_plate}
                 </p>
+                {viewOnly && (
+                  <p className="text-[11px] text-gray-400 mt-0.5 ml-7">
+                    {t('yc_inspected_at')}: {formatDateTimeRelative(inspecting.checked_at)}
+                    {inspecting.yard_status === 'out' && (
+                      <> · {t('yc_departed_at')}: {formatDateTimeRelative(inspecting.updated_at || inspecting.checked_at)}</>
+                    )}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] px-2 py-1 rounded-full font-semibold bg-red-100 text-red-700">
+                <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${
+                  !allChecked ? 'bg-gray-200 text-gray-600' : hasFail ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                }`}>
                   {checkedCount}/5
                 </span>
                 <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
@@ -408,29 +468,71 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                         <p className="text-[10px] text-red-600 mt-1">{t(def.ngKey)}</p>
                       </div>
                     </div>
-                    <div className="flex gap-2 px-3 pb-3">
-                      <button
-                        onClick={() => setResult(def.item, 'pass')}
-                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                          isPass ? 'bg-emerald-500 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-emerald-50'
-                        }`}
-                      >
-                        ✓ {t('yc_pass')}
-                      </button>
-                      <button
-                        onClick={() => setResult(def.item, 'fail')}
-                        className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                          isFail ? 'bg-red-500 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-red-50'
-                        }`}
-                      >
-                        ✗ {t('yc_fail')}
-                      </button>
-                    </div>
+                    {!viewOnly && (
+                      <div className="flex gap-2 px-3 pb-3">
+                        <button
+                          onClick={() => setResult(def.item, 'pass')}
+                          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                            isPass ? 'bg-emerald-500 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-emerald-50'
+                          }`}
+                        >
+                          ✓ {t('yc_pass')}
+                        </button>
+                        <button
+                          onClick={() => setResult(def.item, 'fail')}
+                          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                            isFail ? 'bg-red-500 text-white' : 'bg-white text-gray-600 border border-gray-300 hover:bg-red-50'
+                          }`}
+                        >
+                          ✗ {t('yc_fail')}
+                        </button>
+                      </div>
+                    )}
+
+                    {isFail && !viewOnly && (
+                      <div className="flex items-center gap-2 flex-wrap px-3 pb-3">
+                        {(current.photos || []).map((photo, idx) => (
+                          <div key={idx} className="relative w-14 h-14 rounded-lg overflow-hidden border border-red-200">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={photo} className="w-full h-full object-cover" alt="" />
+                            <button
+                              onClick={() => removePhoto(def.item, idx)}
+                              className="absolute top-0 right-0 bg-black/60 text-white rounded-bl-lg p-0.5"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {(current.photos?.length || 0) < 3 && (
+                          <label className="w-14 h-14 rounded-lg border-2 border-dashed border-red-300 flex items-center justify-center text-red-400 cursor-pointer hover:bg-red-50">
+                            <Camera className="w-5 h-5" />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              className="hidden"
+                              onChange={(e) => {
+                                handlePhotoSelect(def.item, e.target.files?.[0]);
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    )}
+                    {isFail && viewOnly && (current.photos?.length ?? 0) > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap px-3 pb-3">
+                        {current.photos!.map((photo, idx) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img key={idx} src={photo} className="w-14 h-14 rounded-lg object-cover border border-gray-200" alt="" />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
 
-              {hasFail && (
+              {hasFail && !viewOnly && (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-3">
                   <label className="text-[11px] font-semibold text-red-700 flex items-center gap-1 mb-1.5">
                     <AlertCircle className="w-3.5 h-3.5" />
@@ -445,23 +547,44 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                   />
                 </div>
               )}
+
+              {hasFail && viewOnly && ngDetail && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                  <p className="text-[11px] font-semibold text-red-700 flex items-center gap-1 mb-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {t('yc_ng_detail')}
+                  </p>
+                  <p className="text-xs text-gray-700 whitespace-pre-wrap">{ngDetail}</p>
+                </div>
+              )}
             </div>
 
-            <div className="shrink-0 border-t border-border p-4">
-              {!allChecked && (
-                <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1 mb-2 justify-center">
-                  <AlertCircle className="w-3 h-3" />
-                  {t('yc_finish_all_prompt')}
-                </p>
-              )}
-              <button
-                onClick={handleSubmitChecklist}
-                disabled={!canSubmitChecklist || loading}
-                className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5"
-              >
-                {loading ? '...' : t('yc_submit_inspection')}
-              </button>
-            </div>
+            {viewOnly ? (
+              <div className="shrink-0 border-t border-border p-4">
+                <button
+                  onClick={handleClose}
+                  className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm"
+                >
+                  {t('yc_close')}
+                </button>
+              </div>
+            ) : (
+              <div className="shrink-0 border-t border-border p-4">
+                {!allChecked && (
+                  <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1 mb-2 justify-center">
+                    <AlertCircle className="w-3 h-3" />
+                    {t('yc_finish_all_prompt')}
+                  </p>
+                )}
+                <button
+                  onClick={handleSubmitChecklist}
+                  disabled={!canSubmitChecklist || loading}
+                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5"
+                >
+                  {loading ? '...' : t('yc_submit_inspection')}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -661,7 +784,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                           <button
                             onClick={handleMarkOut}
                             disabled={loading}
-                            className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-900 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1.5"
                           >
                             <Truck className="w-4 h-4" />
                             {loading ? '...' : t('yc_mark_out')}

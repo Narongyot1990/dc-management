@@ -4,8 +4,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { YardCheck, YardCheckType } from '@/types';
-import { formatDateTimeRelative } from '@/utils/format';
+import { formatDateTimeRelative, formatDate, formatTime, formatDateTime } from '@/utils/format';
 import { getYardEmptyDisplayStatus } from '@/utils/styles';
+import { YARD_NAME } from '@/utils/constants';
 import { useYardChecks } from '@/hooks';
 import { SearchInput, BottomSheet } from '@/components/ui';
 import { YardCheckModal, type YardCheckModalMode } from '@/components/yardcheck/YardCheckModal';
@@ -16,7 +17,51 @@ import {
   Package,
   Plus,
   ScanLine,
+  Copy,
+  Check,
 } from 'lucide-react';
+
+// Builds the plain-text "yard update" report pasted into LINE: assets
+// currently physically IN the yard (not the broader "needs action" set used
+// elsewhere on this page), grouped by type, oldest-in-yard first so the
+// longest-dwelling containers are the first thing anyone reads.
+function buildYardUpdateReport(checks: YardCheck[]): string {
+  const now = new Date();
+  const inNow = checks.filter((c) => c.yard_status === 'in');
+
+  const byType = (type: YardCheckType) =>
+    inNow
+      .filter((c) => c.type === type)
+      .slice()
+      .sort((a, b) => new Date(a.checked_at).getTime() - new Date(b.checked_at).getTime());
+
+  const emptyList = byType('empty');
+  const ladenList = byType('laden');
+  const chassisList = byType('chassis');
+
+  const elapsedHours = (checkedAt: string | Date) =>
+    Math.max(0, Math.floor((now.getTime() - new Date(checkedAt).getTime()) / 3600000));
+
+  const containerLine = (c: YardCheck) =>
+    `${c.container_no} | ${c.size} | IN ${formatDateTime(c.checked_at)} (${elapsedHours(c.checked_at)}h)`;
+
+  const lines: string[] = [
+    `FLS YARD UPDATE | ${formatDate(now)} ${formatTime(now)}`,
+    `Yard: ${YARD_NAME}`,
+    `TOTAL IN YARD: ${inNow.length}`,
+    '',
+    `EMPTY (${emptyList.length})`,
+    ...emptyList.map(containerLine),
+    '',
+    `LADEN (${ladenList.length})`,
+    ...ladenList.map(containerLine),
+    '',
+    `CHASSIS (${chassisList.length})`,
+    ...chassisList.map((c) => c.chassis_plate),
+  ];
+
+  return lines.join('\n');
+}
 
 // Lucide has no "license plate" glyph — a small plate-shaped rect reads clearer
 // than the Truck icon, which people mistake for "this is a tractor unit" rather
@@ -56,6 +101,8 @@ function YardCheckSummaryContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [initialInspect, setInitialInspect] = useState<YardCheck | null>(null);
   const [initialEdit, setInitialEdit] = useState<YardCheck | null>(null);
+  const [initialView, setInitialView] = useState<YardCheck | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { checks, loading, refetch, markOut, deleteCheck, actionLoading } = useYardChecks({});
 
@@ -171,16 +218,37 @@ function YardCheckSummaryContent() {
     setDeletingCheck(null);
   };
 
+  const handleCopyYardUpdate = async () => {
+    const text = buildYardUpdateReport(checks);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      alert(text);
+    }
+  };
+
   const openModal = (mode: YardCheckModalMode) => {
     setInitialInspect(null);
     setInitialEdit(null);
+    setInitialView(null);
     setModalMode(mode);
     setModalOpen(true);
   };
 
   const openEditModal = (check: YardCheck) => {
     setInitialInspect(null);
+    setInitialView(null);
     setInitialEdit(check);
+    setModalMode('update');
+    setModalOpen(true);
+  };
+
+  const openViewModal = (check: YardCheck) => {
+    setInitialInspect(null);
+    setInitialEdit(null);
+    setInitialView(check);
     setModalMode('update');
     setModalOpen(true);
   };
@@ -189,6 +257,7 @@ function YardCheckSummaryContent() {
     setModalOpen(false);
     setInitialInspect(null);
     setInitialEdit(null);
+    setInitialView(null);
     if (searchParams.get('inspect')) {
       window.history.replaceState(null, '', '/yardcheck/summary');
     }
@@ -286,7 +355,7 @@ function YardCheckSummaryContent() {
             <button
               onClick={() => setMarkOutCheck(c)}
               disabled={actionLoading}
-              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-gray-800 text-white font-medium disabled:opacity-50"
+              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-amber-600 text-white font-medium disabled:opacity-50"
             >
               {t('yc_mark_out')}
             </button>
@@ -349,6 +418,13 @@ function YardCheckSummaryContent() {
           <div className="flex-1">
             <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} />
           </div>
+          <button
+            onClick={handleCopyYardUpdate}
+            title={t('yc_copy_yard_update')}
+            className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-amber-600" />}
+          </button>
           <button
             onClick={() => openModal('update')}
             title={t('yc_mode_update')}
@@ -437,20 +513,28 @@ function YardCheckSummaryContent() {
           </div>
         ) : (
           <div className="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-200">
-            {outList.map((c) => (
-              <div key={c.id} className="flex items-center gap-2 px-3 py-2 text-[11px]">
-                <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
-                  {t(`yc_type_${c.type}`)}
-                </span>
-                <span className="font-mono font-medium text-gray-700 flex items-center gap-1 w-[94px] shrink-0">
-                  <PlateIcon className="w-3 h-3 text-gray-400 shrink-0" />
-                  <span className="tabular-nums truncate">{c.chassis_plate}</span>
-                </span>
-                <span className={`truncate flex-1 font-mono font-medium ${CONTAINER_NO_CLASS}`}>{c.container_no || ''}</span>
-                <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
-                <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
-              </div>
-            ))}
+            {outList.map((c) => {
+              const canView = c.type === 'empty';
+              const Row = canView ? 'button' : 'div';
+              return (
+                <Row
+                  key={c.id}
+                  onClick={canView ? () => openViewModal(c) : undefined}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left ${canView ? 'hover:bg-gray-100' : ''}`}
+                >
+                  <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
+                    {t(`yc_type_${c.type}`)}
+                  </span>
+                  <span className="font-mono font-medium text-gray-700 flex items-center gap-1 w-[94px] shrink-0">
+                    <PlateIcon className="w-3 h-3 text-gray-400 shrink-0" />
+                    <span className="tabular-nums truncate">{c.chassis_plate}</span>
+                  </span>
+                  <span className={`truncate flex-1 font-mono font-medium ${CONTAINER_NO_CLASS}`}>{c.container_no || ''}</span>
+                  <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
+                  <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
+                </Row>
+              );
+            })}
           </div>
         )}
       </div>
@@ -474,6 +558,7 @@ function YardCheckSummaryContent() {
         onSaved={refetch}
         initialInspect={initialInspect}
         initialEdit={initialEdit}
+        initialView={initialView}
       />
 
       {/* Action sheet */}
@@ -519,7 +604,7 @@ function YardCheckSummaryContent() {
               <button type="button" onClick={cancelMarkOut} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
                 {t('cc_cancel')}
               </button>
-              <button type="button" onClick={confirmMarkOut} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-800 text-white disabled:opacity-50">
+              <button type="button" onClick={confirmMarkOut} disabled={actionLoading} className="flex-1 py-2 rounded-lg text-xs font-medium bg-amber-600 text-white disabled:opacity-50">
                 {actionLoading ? '...' : t('yc_mark_out')}
               </button>
             </div>

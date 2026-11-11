@@ -281,6 +281,11 @@
   "yc_edit_record": "မှတ်တမ်းပြင်ဆင်ရန်",
   "yc_confirm_mark_out_title": "ထွက်ကြောင်း အတည်ပြုရန်",
   "yc_confirm_mark_out_body": "ဤမှတ်တမ်းသည် ယာဒ်မှ ထွက်သွားပြီဟု အတည်ပြုပါသလား?",
+  "yc_view_inspection": "စစ်ဆေးမှု မှတ်တမ်း",
+  "yc_inspected_at": "စစ်ဆေးချိန်",
+  "yc_departed_at": "ထွက်ခွာချိန်",
+  "yc_close": "ပိတ်ရန်",
+  "yc_copy_yard_update": "ယာဒ် အပ်ဒိတ် ကူးယူရန်",
 
   "guide_import_title": "ကုန်ချ လမ်းညွှန် (Import)",
   "guide_import_subtitle": "စက်ရုံအတွင်း ကုန်ချရန် ဝင်ရောက်သော ယာဉ်မောင်းများအတွက် လမ်းညွှန်",

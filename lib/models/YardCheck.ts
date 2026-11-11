@@ -13,6 +13,7 @@ export interface IYardCheck {
   checklist?: Array<{
     item: 1 | 2 | 3 | 4 | 5;
     result: 'pass' | 'fail' | null;
+    photos?: string[];
   }>;
   ng_detail?: string;
   checked_at: Date;
@@ -56,6 +57,7 @@ const YardCheckSchema = new Schema<IYardCheck>({
   checklist: [{
     item: { type: Number, enum: [1, 2, 3, 4, 5] },
     result: { type: String, enum: ['pass', 'fail', null], default: null },
+    photos: { type: [String], default: undefined },
   }],
   ng_detail: { type: String },
   checked_at: { type: Date, default: Date.now },
