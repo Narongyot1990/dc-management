@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { Camera, ImagePlus, X, ScanLine, Loader2, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Camera, Upload, X, ScanLine, Loader2, Check, AlertCircle, Info } from 'lucide-react';
 import type { ContainerScanResult } from '@/types';
 
 interface ContainerScannerProps {
-  /** 'yard' also tries to read the ISO size/type code and chassis plate visible in the photo. Default: 'container' (container number only). */
+  /** Yard mode also reads size and chassis plate from the same image. */
   mode?: 'container' | 'yard';
   onScan: (result: ContainerScanResult) => void;
   onClose: () => void;
@@ -14,502 +15,203 @@ interface ContainerScannerProps {
 
 export function ContainerScanner({ mode = 'container', onScan, onClose }: ContainerScannerProps) {
   const { t } = useLanguage();
-  const [isScanning, setIsScanning] = useState(false);
+  const [cameraState, setCameraState] = useState<'starting' | 'ready' | 'error'>('starting');
+  const [cameraAttempt, setCameraAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [ocrProgress, setOcrProgress] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [debugText, setDebugText] = useState<string>('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const pendingStreamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const processingRef = useRef(false);
+  const activeRef = useRef(true);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
 
-  // ============= OCR LOGIC =============
-
-  // Perform OCR using Gemini 2.5 Flash API
-  const performOCR = useCallback(async (canvas: HTMLCanvasElement): Promise<ContainerScanResult | null> => {
-    try {
-      console.log('🔍 Starting Gemini OCR...');
-      setOcrProgress(10);
-
-      // Convert canvas to base64
-      const base64Image = canvas.toDataURL('image/jpeg', 0.95);
-      setOcrProgress(30);
-
-      console.log('📤 Sending image to Gemini API...');
-
-      // Call our API route
-      const response = await fetch('/api/ocr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ image: base64Image, mode }),
-      });
-
-      setOcrProgress(80);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ API error:', errorData);
-        setDebugText(`API Error: ${errorData.error}\n${errorData.details || ''}`);
-        return null;
-      }
-
-      const data = await response.json();
-      setOcrProgress(100);
-
-      console.log('📝 Gemini response:', data);
-
-      if (data.containerNumber) {
-        console.log('✅ Container number found:', data.containerNumber);
-        return { containerNumber: data.containerNumber, size: data.size ?? null, chassisPlate: data.chassisPlate ?? null };
-      } else {
-        console.log('❌ No container number found');
-        setDebugText(data.rawResponse || 'No container number detected');
-        return null;
-      }
-    } catch (err) {
-      console.error('❌ OCR error:', err);
-      setDebugText(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      return null;
-    } finally {
-      setOcrProgress(0);
-    }
-  }, [mode]);
-
-  // Capture full frame from video
-  const captureROI = useCallback((): HTMLCanvasElement | null => {
-    if (!videoRef.current || !canvasRef.current) return null;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    // Get video dimensions
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-
-    // Set canvas to video size (with max resolution)
-    const maxWidth = 1280;
-    const maxHeight = 720;
-    let width = videoWidth;
-    let height = videoHeight;
-
-    if (width > maxWidth || height > maxHeight) {
-      const ratio = Math.min(maxWidth / width, maxHeight / height);
-      width = width * ratio;
-      height = height * ratio;
-    }
-
-    canvas.width = width;
-    canvas.height = height;
-
-    // Draw full video frame to canvas
-    ctx.drawImage(video, 0, 0, width, height);
-
-    return canvas;
-  }, []);
-
-  // Stop camera
   const stopCamera = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setIsScanning(false);
-    setOcrProgress(0);
-    setCapturedImage(null);
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  // Scan frame and perform OCR
-  const scanFrame = useCallback(async () => {
-    const canvas = captureROI();
-    if (!canvas) return;
+  const handleClose = useCallback(() => {
+    activeRef.current = false;
+    requestRef.current?.abort();
+    stopCamera();
+    onClose();
+  }, [onClose, stopCamera]);
 
-    // Freeze the captured frame immediately so the user sees the shot was taken and can move away.
-    setCapturedImage(canvas.toDataURL('image/jpeg', 0.85));
-
-    const result = await performOCR(canvas);
-
-    if (result) {
-      console.log('✅ Container found:', result);
-      stopCamera();
-      onScan(result);
-    }
-  }, [captureROI, performOCR, onScan, stopCamera]);
-
-  // Start camera
-  const startCamera = async () => {
-    try {
-      setError(null);
-      setOcrProgress(0);
-
-      console.log('Requesting camera access...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
-
-      console.log('Camera access granted! Stream:', stream);
-      pendingStreamRef.current = stream;
-      setIsScanning(true);
-      console.log('isScanning set to TRUE');
-    } catch (err) {
-      console.error('Camera error:', err);
-      setError(t('scanner_error_camera'));
-    }
-  };
-
-  // Manual capture function
-  const handleManualCapture = useCallback(async () => {
-    if (isProcessing) return; // Prevent multiple captures
-
-    setIsProcessing(true);
-    setError(null);
-    await scanFrame();
-    setIsProcessing(false);
-    setCapturedImage(null); // if scan failed/not found, go back to live preview to retry
-  }, [isProcessing, scanFrame]);
-
-  // Setup video stream when isScanning becomes true (NO AUTO-SCAN)
+  // Opening Scan immediately requests the rear camera. A late permission result
+  // is disposed if the dialog has closed (also safe under React Strict Mode).
   useEffect(() => {
-    const setupVideoStream = async (stream: MediaStream) => {
-      if (!videoRef.current) {
-        console.log('Video ref not ready yet');
+    let cancelled = false;
+    let localStream: MediaStream | null = null;
+    activeRef.current = true;
+    const openCamera = async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera unavailable');
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+        if (cancelled || !activeRef.current) {
+          localStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        streamRef.current = localStream;
+        const video = videoRef.current;
+        if (!video) throw new Error('Preview unavailable');
+        video.srcObject = localStream;
+        await video.play();
+        if (!cancelled && activeRef.current) setCameraState('ready');
+      } catch {
+        localStream?.getTracks().forEach((track) => track.stop());
+        if (!cancelled && activeRef.current) setCameraState('error');
+      }
+    };
+    void openCamera();
+    return () => {
+      cancelled = true;
+      activeRef.current = false;
+      localStream?.getTracks().forEach((track) => track.stop());
+      requestRef.current?.abort();
+    };
+  }, [cameraAttempt]);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialogRef.current?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); handleClose(); }
+      if (event.key === 'Tab') {
+        const buttons = dialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
+        if (!buttons?.length) return;
+        const first = buttons[0], last = buttons[buttons.length - 1];
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) { event.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', keydown, true);
+    return () => {
+      document.removeEventListener('keydown', keydown, true);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [handleClose]);
+
+  const scanCanvas = async (canvas: HTMLCanvasElement) => {
+    if (!activeRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 45000);
+    try {
+      const image = canvas.toDataURL('image/jpeg', 0.9);
+      setCapturedImage(image);
+      const response = await fetch('/api/ocr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image, mode }), signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('OCR request failed');
+      const data = await response.json();
+      if (!activeRef.current) return;
+      if (!data.containerNumber) {
+        setError(tRef.current('scanner_error_not_found'));
         return;
       }
-
-      console.log('Setting up video stream...');
-      videoRef.current.srcObject = stream;
-      streamRef.current = stream;
-
-      videoRef.current.onloadedmetadata = async () => {
-        try {
-          if (videoRef.current) {
-            await videoRef.current.play();
-            console.log('Video playing! Ready for manual capture.');
-          }
-        } catch (playError) {
-          console.error('Video play error:', playError);
-        }
-      };
-    };
-
-    if (isScanning && pendingStreamRef.current && videoRef.current) {
-      console.log('Video element is now ready! Setting up stream...');
-      setupVideoStream(pendingStreamRef.current);
-      pendingStreamRef.current = null;
-    }
-  }, [isScanning]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
       stopCamera();
-    };
-  }, [stopCamera]);
-
-  // Handle image file upload and process directly
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setError(null);
-    setDebugText('');
-    setIsProcessing(true);
-    setOcrProgress(0);
-
-    try {
-      const reader = new FileReader();
-
-      reader.onload = async (e) => {
-        if (e.target?.result && canvasRef.current) {
-          // Create image element to load the uploaded file
-          const img = new Image();
-          img.onload = async () => {
-            if (!canvasRef.current) return;
-
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-
-            // Set canvas to image size (with max resolution)
-            const maxWidth = 1280;
-            const maxHeight = 720;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > maxWidth || height > maxHeight) {
-              const ratio = Math.min(maxWidth / width, maxHeight / height);
-              width = width * ratio;
-              height = height * ratio;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            // Draw image to canvas
-            ctx.drawImage(img, 0, 0, width, height);
-
-            console.log('📤 Processing uploaded image...');
-
-            // Perform OCR on the image
-            const result = await performOCR(canvas);
-
-            if (result) {
-              console.log('✅ Successfully extracted from uploaded image:', result);
-              onScan(result);
-            } else {
-              setError(t('scanner_error_not_found'));
-            }
-
-            setIsProcessing(false);
-          };
-
-          img.src = e.target.result as string;
-        }
-      };
-
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error('File upload error:', err);
-      setError(t('scanner_error_camera'));
-      setIsProcessing(false);
+      onScan({ containerNumber: data.containerNumber, size: data.size ?? null, chassisPlate: data.chassisPlate ?? null });
+    } catch {
+      if (activeRef.current) setError(tRef.current('scanner_error_processing'));
+    } finally {
+      window.clearTimeout(timeout);
+      if (requestRef.current === controller) requestRef.current = null;
     }
   };
 
-  const handleClose = () => {
-    stopCamera();
-    // Clear all states when closing
-    setError(null);
-    setDebugText('');
-    setOcrProgress(0);
-    setIsProcessing(false);
-    onClose();
+  // Keep the whole preview frame: what the user sees is what OCR receives.
+  const makeCanvas = (source: CanvasImageSource, width: number, height: number) => {
+    if (!width || !height) throw new Error('Image not ready');
+    const scale = Math.min(1, 1920 / Math.max(width, height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas unavailable');
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+    return canvas;
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-      <div className="bg-white rounded-xl max-w-lg w-full p-5">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
-              <ScanLine className="w-5 h-5 text-blue-600" />
-            </div>
-            <h3 className="text-base font-semibold text-[var(--text-primary)]">
-              {t('scanner_title')}
-            </h3>
-          </div>
-          <button
-            onClick={handleClose}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+  const runScan = async (getCanvas: () => Promise<HTMLCanvasElement> | HTMLCanvasElement) => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    setIsProcessing(true);
+    setError(null);
+    try {
+      const canvas = await getCanvas();
+      if (activeRef.current) await scanCanvas(canvas);
+    } catch {
+      if (activeRef.current) setError(tRef.current('scanner_error_image'));
+    } finally {
+      processingRef.current = false;
+      if (activeRef.current) { setIsProcessing(false); setCapturedImage(null); }
+    }
+  };
+
+  const handleCapture = () => void runScan(() => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) throw new Error('Camera not ready');
+    return makeCanvas(video, video.videoWidth, video.videoHeight);
+  });
+
+  const handleFile = (file: File) => void runScan(async () => {
+    if (!file.type.startsWith('image/')) throw new Error('Invalid image');
+    const url = URL.createObjectURL(file);
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+      return makeCanvas(image, image.naturalWidth, image.naturalHeight);
+    } finally { URL.revokeObjectURL(url); }
+  });
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center sm:p-6" onClick={(event) => event.stopPropagation()}>
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="scanner-title" className="flex flex-col w-full h-[100dvh] sm:h-[min(90dvh,850px)] sm:max-w-2xl bg-slate-950 sm:rounded-3xl overflow-hidden text-white">
+        <header className="flex items-center justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
+          <div className="flex gap-3 items-center"><ScanLine className="w-6 h-6 text-amber-400" /><h2 id="scanner-title" className="text-base font-semibold">{t('scanner_title')}</h2></div>
+          <button type="button" onClick={handleClose} aria-label={t('yc_close')} className="min-w-11 min-h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20"><X className="w-5 h-5" /></button>
+        </header>
+        <div className="relative flex-1 min-h-0 bg-black overflow-hidden">
+          <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-contain ${capturedImage ? 'invisible' : ''}`} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {capturedImage && <img src={capturedImage} alt={t('scanner_captured')} className="absolute inset-0 w-full h-full object-contain" />}
+          {cameraState === 'ready' && !isProcessing && <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-5">
+            <span className="self-start inline-flex items-center gap-2 rounded-full bg-black/65 px-3 py-1.5 text-xs"><span className="w-2 h-2 rounded-full bg-emerald-400" />{t('scanner_ready')}</span>
+            <div className="self-center w-4/5 h-1/3 border-2 border-white/70 rounded-2xl shadow-[0_0_0_999px_rgba(0,0,0,0.12)]" />
+            <p className="text-center text-sm rounded-xl bg-black/65 p-3">{t(mode === 'yard' ? 'scanner_aim_yard' : 'scanner_aim')}</p>
+          </div>}
+          {cameraState === 'starting' && !isProcessing && <div role="status" className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center"><Loader2 className="h-9 w-9 animate-spin text-amber-400" /><p>{t('scanner_starting')}</p><p className="text-xs text-slate-400">{t('scanner_permission_hint')}</p></div>}
+          {cameraState === 'error' && !isProcessing && <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center"><Camera className="h-12 w-12 text-slate-500" /><p className="text-sm max-w-xs text-slate-200">{t('scanner_error_camera')}</p><button type="button" onClick={() => { setCameraState('starting'); setError(null); setCameraAttempt((v) => v + 1); }} className="flex items-center gap-2 min-h-11 px-5 rounded-xl bg-white/10 hover:bg-white/20"><RefreshCw className="h-4 w-4" />{t('scanner_retry')}</button></div>}
+          {isProcessing && <div role="status" aria-live="polite" className="absolute inset-0 bg-black/75 flex flex-col gap-4 items-center justify-center p-6 text-center"><span className="inline-flex gap-2 items-center text-emerald-300 text-sm"><Check className="h-4 w-4" />{t('scanner_captured')}</span><Loader2 className="h-10 w-10 animate-spin text-amber-400" /><p className="font-semibold">{t('scanner_processing')}</p><p className="text-sm text-slate-300">{t('scanner_captured_hint')}</p></div>}
         </div>
-
-        {/* Camera Preview */}
-        {isScanning && (
-          <div className="relative bg-black rounded-lg overflow-hidden mb-4">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-64 object-cover ${capturedImage ? 'invisible' : ''}`}
-              style={{ backgroundColor: '#000' }}
-            />
-
-            {/* Frozen frame: shown the instant capture happens, so the user knows they can move the camera away */}
-            {capturedImage && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={capturedImage} alt="Captured frame" className="absolute inset-0 w-full h-64 object-cover" />
-            )}
-
-            {/* Hidden canvas for OCR */}
-            <canvas ref={canvasRef} className="hidden" />
-
-            {/* Loading Overlay */}
-            {isProcessing && (
-              <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
-                <div className="text-center">
-                  {capturedImage && (
-                    <div className="inline-flex items-center gap-1 bg-emerald-500 text-white text-[11px] font-semibold px-2.5 py-1 rounded-full mb-3">
-                      <Check className="w-3.5 h-3.5" />
-                      {t('scanner_captured')}
-                    </div>
-                  )}
-
-                  {/* Spinner Animation */}
-                  <div className="relative w-16 h-16 mx-auto mb-3">
-                    <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
-                    <div className="absolute inset-0 border-4 border-transparent border-t-blue-500 rounded-full animate-spin"></div>
-                  </div>
-
-                  {/* Progress Text */}
-                  <div className="text-white">
-                    <p className="text-base font-semibold mb-1">{t('scanner_processing')}</p>
-                    <p className="text-xs text-emerald-300 mb-2">{t('scanner_captured_hint')}</p>
-                    <div className="w-48 bg-gray-700 rounded-full h-1.5 mx-auto">
-                      <div
-                        className="bg-gradient-to-r from-blue-500 to-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                        style={{ width: `${ocrProgress}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-sm text-gray-300 mt-2">{ocrProgress}%</p>
-                  </div>
-                </div>
-              </div>
-            )}
+        <footer className="shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-slate-950 space-y-3">
+          {error && <div role="alert" className="flex gap-2 rounded-xl bg-red-950 p-3 text-red-100 text-sm"><AlertCircle className="h-5 w-5 shrink-0" />{error}</div>}
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={isProcessing} onClick={() => fileRef.current?.click()} className="flex min-h-14 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-40"><ImagePlus className="h-5 w-5" /><span className="text-[11px]">{t('scanner_gallery')}</span></button>
+            <button type="button" onClick={handleCapture} disabled={cameraState !== 'ready' || isProcessing} className="flex-1 min-h-14 rounded-2xl bg-amber-400 text-slate-950 font-semibold flex gap-2 items-center justify-center hover:bg-amber-300 disabled:bg-slate-800 disabled:text-slate-500">{isProcessing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}{t('scanner_capture_scan')}</button>
           </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <span className="text-sm">{error}</span>
-          </div>
-        )}
-
-        {/* Debug Text Display */}
-        {debugText && (
-          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg max-h-64 overflow-y-auto">
-            <p className="text-xs font-semibold text-amber-800 mb-2">DEBUG - OCR Raw Text:</p>
-            <pre className="text-xs text-amber-900 whitespace-pre-wrap font-mono bg-white p-2 rounded border border-amber-200">
-              {debugText}
-            </pre>
-          </div>
-        )}
-
-        {/* Instructions */}
-        {!isScanning && !error && (
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
-              <Info className="w-4 h-4 text-blue-600" />
-              <strong>{t('scanner_instruction_title')}</strong>
-            </div>
-            {/*<ul className="text-sm text-gray-600 space-y-1 ml-6">
-              <li>• {t('scanner_instruction_1')}</li>
-              <li>• {t('scanner_instruction_2')}</li>
-              <li>• {t('scanner_instruction_3')}</li>
-              <li>• {t('scanner_instruction_4')}</li>
-            </ul>*/}
-          </div>
-        )}
-
-        {/* Hidden canvas for OCR (used by both camera and file upload) */}
-        {!isScanning && <canvas ref={canvasRef} className="hidden" />}
-
-        {/* OCR Progress (for file upload) */}
-        {isProcessing && ocrProgress > 0 && (
-          <div className="mb-4">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="flex items-center justify-between text-blue-800 text-sm mb-2">
-                <span>Processing image...</span>
-                <span>{ocrProgress}%</span>
-              </div>
-              <div className="w-full bg-blue-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${ocrProgress}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-2">
-          {!isScanning && !isProcessing ? (
-            <>
-              <button
-                onClick={startCamera}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <Camera className="w-5 h-5" />
-                {t('scanner_open_camera')}
-              </button>
-
-              <div className="relative">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  <Upload className="w-5 h-5" />
-                  {t('scanner_upload_image')}
-                </button>
-              </div>
-
-              <button
-                onClick={handleClose}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-lg transition-colors"
-              >
-                {t('cancel')}
-              </button>
-            </>
-          ) : isScanning ? (
-            <>
-              <button
-                onClick={handleManualCapture}
-                disabled={isProcessing}
-                className={`w-full font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                  isProcessing
-                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                }`}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    {t('scanner_processing')}
-                  </>
-                ) : (
-                  <>
-                    <ScanLine className="w-5 h-5" />
-                    {t('scanner_capture_scan')}
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleClose}
-                disabled={isProcessing}
-                className={`w-full font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                  isProcessing
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                }`}
-              >
-                <X className="w-5 h-5" />
-                {t('scanner_stop')}
-              </button>
-            </>
-          ) : isProcessing ? (
-            <button
-              disabled
-              className="w-full bg-gray-400 text-white font-medium py-2.5 rounded-lg cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              <Loader2 className="w-5 h-5 animate-spin" />
-              {t('scanner_processing')}
-            </button>
-          ) : null}
-        </div>
+          <p className="text-[11px] text-slate-400 text-center">{t('scanner_manual_hint')}</p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) handleFile(file); }} />
+        </footer>
       </div>
-    </div>
+    </div>, document.body
   );
 }

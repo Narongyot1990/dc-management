@@ -429,7 +429,7 @@ function YardCheckSummaryContent() {
           </button>
           <button
             onClick={() => openModal('update')}
-            title={t('yc_mode_update')}
+            title={t('yc_scan_container')}
             className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
           >
             <ScanLine className="w-4 h-4 text-amber-600" />
@@ -554,6 +554,7 @@ function YardCheckSummaryContent() {
 
       {/* Create/Update modal */}
       <YardCheckModal
+        startWithScanner={modalMode === 'update' && !initialInspect && !initialEdit && !initialView}
         isOpen={modalOpen}
         mode={modalMode}
         onClose={closeModal}
@@ -640,3 +641,4 @@ function YardCheckSummaryContent() {
     </div>
   );
 }
+
