@@ -358,5 +358,8 @@
   "scanner_gallery": "选择照片",
   "scanner_manual_hint": "也可以关闭此页面并手动输入箱号。",
   "scanner_error_processing": "无法读取照片。请检查网络连接后重试。",
-  "scanner_error_image": "无法打开此图片，请选择其他照片。"
+  "scanner_error_image": "无法打开此图片，请选择其他照片。",
+  "yc_photo_source": "添加 / 替换照片",
+  "yc_take_photo": "拍照",
+  "yc_choose_from_device": "从设备选择"
 }
