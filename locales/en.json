@@ -358,5 +358,8 @@
   "scanner_gallery": "Photos",
   "scanner_manual_hint": "You can also close this screen and enter the number manually.",
   "scanner_error_processing": "Could not read the image. Check your connection and try again.",
-  "scanner_error_image": "Cannot open this image. Please select another photo."
+  "scanner_error_image": "Cannot open this image. Please select another photo.",
+  "yc_photo_source": "Add / replace photo",
+  "yc_take_photo": "Take photo",
+  "yc_choose_from_device": "Choose from device"
 }

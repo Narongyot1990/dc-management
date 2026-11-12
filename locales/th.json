@@ -358,5 +358,8 @@
   "scanner_gallery": "เลือกภาพ",
   "scanner_manual_hint": "สามารถปิดหน้านี้แล้วกรอกหมายเลขด้วยตนเองได้",
   "scanner_error_processing": "อ่านภาพไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง",
-  "scanner_error_image": "เปิดภาพนี้ไม่ได้ กรุณาเลือกภาพอื่น"
+  "scanner_error_image": "เปิดภาพนี้ไม่ได้ กรุณาเลือกภาพอื่น",
+  "yc_photo_source": "เพิ่ม / เปลี่ยนภาพ",
+  "yc_take_photo": "ถ่ายภาพ",
+  "yc_choose_from_device": "เลือกภาพจากเครื่อง"
 }

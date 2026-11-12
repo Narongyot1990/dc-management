@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Camera, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, Pencil, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, ImagePlus, Loader2, MoreHorizontal, Pencil, Trash2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface InspectionPhotosProps {
@@ -21,13 +21,15 @@ export function InspectionPhotos({ photos, readOnly, busy, uploading, onSelect, 
   const [zoomed, setZoomed] = useState(false);
   const [menu, setMenu] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [sourceOpen, setSourceOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const replaceRef = useRef<number | undefined>(undefined);
   const overlayRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const touchRef = useRef<{ x: number; y: number } | null>(null);
-  const dialogOpen = viewer !== null || deleting !== null;
+  const dialogOpen = viewer !== null || deleting !== null || sourceOpen;
 
   const navigate = (delta: number) => {
     setViewer((index) => index === null ? null : (index + delta + photos.length) % photos.length);
@@ -60,10 +62,11 @@ export function InspectionPhotos({ photos, readOnly, busy, uploading, onSelect, 
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault(); event.stopPropagation();
-        if (deleting !== null) setDeleting(null);
+        if (sourceOpen) setSourceOpen(false);
+        else if (deleting !== null) setDeleting(null);
         else { setViewer(null); setZoomed(false); }
       }
-      if (deleting === null && photos.length > 1 && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      if (!sourceOpen && deleting === null && photos.length > 1 && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
         event.preventDefault();
         setViewer((index) => index === null ? null : (index + (event.key === 'ArrowRight' ? 1 : -1) + photos.length) % photos.length);
         setZoomed(false);
@@ -86,12 +89,24 @@ export function InspectionPhotos({ photos, readOnly, busy, uploading, onSelect, 
       document.removeEventListener('keydown', keydown, true);
       previousFocus?.focus();
     };
-  }, [dialogOpen, deleting, photos.length]);
+  }, [dialogOpen, deleting, photos.length, sourceOpen]);
 
   const chooseFile = (index?: number) => {
     replaceRef.current = index;
     setMenu(null);
-    fileRef.current?.click();
+    setSourceOpen(true);
+  };
+  const selectSource = (source: 'camera' | 'gallery') => {
+    if (busy) return;
+    // Invoke synchronously from the user's tap so mobile browsers retain activation.
+    // Gallery deliberately has no capture hint; Camera explicitly requests the rear camera.
+    (source === 'camera' ? cameraRef : fileRef).current?.click();
+    setSourceOpen(false);
+  };
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file && !busy) void onSelect(file, replaceRef.current);
   };
   const closeViewer = () => { setViewer(null); setZoomed(false); };
   const photoLabel = (index: number) => `${t('yc_photo')} ${index + 1}`;
@@ -121,11 +136,24 @@ export function InspectionPhotos({ photos, readOnly, busy, uploading, onSelect, 
         {!readOnly && photos.length < 3 && !uploading && <button type="button" disabled={busy} onClick={() => chooseFile()} className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 text-gray-600 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 disabled:opacity-40"><Camera className="h-6 w-6" /><span className="text-[11px]">{t('yc_add_photo')}</span></button>}
         {uploading && <div role="status" className="w-24 h-24 flex flex-col items-center justify-center gap-2 text-amber-600 border-2 border-dashed border-amber-300 rounded-xl"><Loader2 className="h-6 w-6 animate-spin" /><span className="text-[11px]">{t('yc_uploading_photo')}</span></div>}
       </div>
-      {!readOnly && <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(event) => {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (file) void onSelect(file, replaceRef.current);
-      }} />}
+      {!readOnly && (
+        <>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+        </>
+      )}
+      {sourceOpen && !readOnly && createPortal(
+        <div className="fixed inset-0 z-[110] bg-black/65 flex items-end sm:items-center justify-center sm:p-4" onClick={(event) => { event.stopPropagation(); setSourceOpen(false); }}>
+          <div ref={overlayRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="photo-source-title" className="w-full max-w-sm bg-white rounded-t-2xl sm:rounded-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <h2 id="photo-source-title" className="text-base font-semibold text-gray-900 mb-4">{t('yc_photo_source')}</h2>
+            <div className="flex flex-col gap-3">
+              <button type="button" disabled={busy} onClick={() => selectSource('camera')} className="min-h-14 flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 text-amber-800 font-medium disabled:opacity-40"><Camera className="w-6 h-6" />{t('yc_take_photo')}</button>
+              <button type="button" disabled={busy} onClick={() => selectSource('gallery')} className="min-h-14 flex items-center gap-3 rounded-xl bg-gray-50 border border-gray-200 px-4 text-gray-800 font-medium disabled:opacity-40"><ImagePlus className="w-6 h-6" />{t('yc_choose_from_device')}</button>
+              <button type="button" onClick={() => setSourceOpen(false)} className="min-h-11 rounded-xl text-gray-600 hover:bg-gray-100">{t('cancel')}</button>
+            </div>
+          </div>
+        </div>, document.body
+      )}
       {viewer !== null && photos[viewer] && createPortal(
         <div ref={overlayRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={t('yc_view_photo')} className="fixed inset-0 z-[100] bg-slate-950 text-white flex flex-col" onClick={(event) => event.stopPropagation()}>
           <div className="shrink-0 flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-slate-900">
