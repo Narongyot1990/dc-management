@@ -415,7 +415,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
           <div className="p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-text-primary">{t('yc_save_success')}</h2>
-              <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+              <button aria-label={t('close')} onClick={handleClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600"><X className="w-4 h-4" /></button>
             </div>
             <div className="rounded-lg border border-gray-200 p-3">
               <div className="font-mono text-base font-semibold text-gray-900">{createdRecord.container_no}</div>
@@ -424,7 +424,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => startInspecting(createdRecord)}
-                className="flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 border-amber-500 bg-amber-50 hover:bg-amber-100 text-amber-700"
+                className="flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 border-[#006cb3] bg-blue-50 hover:bg-blue-100 text-[#006cb3]"
               >
                 <ClipboardCheck className="w-6 h-6" />
                 <span className="text-xs font-semibold">{t('yc_inspect_now')}</span>
@@ -446,7 +446,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
             <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-border">
               <div>
                 <h1 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                  <ClipboardCheck className="w-5 h-5 text-amber-600" />
+                  <ClipboardCheck className="w-5 h-5 text-[#006cb3]" />
                   {viewOnly ? t('yc_view_inspection') : t('yc_form_title')}
                 </h1>
                 <p className="text-[11px] text-gray-400 mt-0.5 ml-7">
@@ -467,7 +467,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                 }`}>
                   {checkedCount}/5
                 </span>
-                <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                <button aria-label={t('close')} onClick={handleClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600"><X className="w-4 h-4" /></button>
               </div>
             </div>
 
@@ -588,7 +588,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                 <button
                   onClick={handleSubmitChecklist}
                   disabled={!canSubmitChecklist || loading || uploadingItem !== null}
-                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 bg-[#006cb3] hover:bg-[#00568f] disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5"
                 >
                   {loading ? '...' : t('yc_submit_inspection')}
                 </button>
@@ -602,11 +602,11 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
           <div className="flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-border">
               <h1 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                <ClipboardCheck className="w-5 h-5 text-amber-600" />
+                <ClipboardCheck className="w-5 h-5 text-[#006cb3]" />
                 {t('yc_edit_record')}
                 <span className="text-xs text-gray-400 font-normal">{t(`yc_type_${editingRecord.type}`)}</span>
               </h1>
-              <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+              <button aria-label={t('close')} onClick={handleClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600"><X className="w-4 h-4" /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -621,7 +621,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                     value={editFormData.container_no}
                     onChange={(e) => setEditFormData({ ...editFormData, container_no: e.target.value.toUpperCase() })}
                     placeholder="TCLU1234567"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                   />
                 </div>
               )}
@@ -652,7 +652,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                   value={editFormData.chassis_plate}
                   onChange={(e) => setEditFormData({ ...editFormData, chassis_plate: e.target.value.toUpperCase() })}
                   placeholder="70-1234"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                 />
               </div>
 
@@ -663,7 +663,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                     type="text"
                     value={editFormData.seal_no}
                     onChange={(e) => setEditFormData({ ...editFormData, seal_no: e.target.value.toUpperCase() })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                   />
                 </div>
               )}
@@ -675,7 +675,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                   value={editFormData.remark}
                   onChange={(e) => setEditFormData({ ...editFormData, remark: e.target.value })}
                   placeholder={t('remark')}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                 />
               </div>
             </div>
@@ -691,7 +691,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
               <button
                 onClick={handleEditSubmit}
                 disabled={!isEditValid || loading}
-                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
+                className="flex-1 py-2.5 bg-[#006cb3] hover:bg-[#00568f] disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {loading ? '...' : t('cc_confirm')}
@@ -705,11 +705,11 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
           <div className="flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-border">
               <h1 className="text-base font-semibold text-text-primary flex items-center gap-2">
-                <ClipboardCheck className="w-5 h-5 text-amber-600" />
+                <ClipboardCheck className="w-5 h-5 text-[#006cb3]" />
                 {mode === 'update' ? t('yc_mode_update') : t('yc_mode_create')}
                 <span className="text-xs text-gray-400 font-normal">{YARD_NAME}</span>
               </h1>
-              <button onClick={handleClose} className="p-1 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+              <button aria-label={t('close')} onClick={handleClose} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-slate-600"><X className="w-4 h-4" /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -727,7 +727,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                           value={searchValue}
                           onChange={(e) => setSearchValue(e.target.value.toUpperCase())}
                           placeholder="TCLU1234567 / 70-1234"
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                         />
                         {searchValue.length >= 3 && (
                           <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
@@ -738,7 +738,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                       </div>
                       <button
                         onClick={() => setShowScanner(true)}
-                        className="p-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shrink-0"
+                        className="p-2.5 bg-[#006cb3] hover:bg-[#00568f] text-white rounded-lg transition-colors shrink-0"
                         title={t('yc_scan_container')}
                       >
                         <ScanLine className="w-5 h-5" />
@@ -819,9 +819,9 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                           onClick={() => handleTypeSelect(ty)}
                           className={`py-2.5 rounded-lg text-xs font-semibold border transition-all ${
                             type === ty
-                              ? ty === 'empty' ? 'bg-amber-500 text-white border-amber-500'
+                              ? ty === 'empty' ? 'bg-[#006cb3] text-white border-[#006cb3]'
                               : ty === 'laden' ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-violet-500 text-white border-violet-500'
+                              : 'bg-teal-600 text-white border-teal-600'
                               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                           }`}
                         >
@@ -843,11 +843,11 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                           value={formData.container_no}
                           onChange={(e) => setFormData({ ...formData, container_no: e.target.value.toUpperCase() })}
                           placeholder="TCLU1234567"
-                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                         />
                         <button
                           onClick={() => setShowScanner(true)}
-                          className="p-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shrink-0"
+                          className="p-2.5 bg-[#006cb3] hover:bg-[#00568f] text-white rounded-lg transition-colors shrink-0"
                           title={t('yc_scan_container')}
                         >
                           <ScanLine className="w-5 h-5" />
@@ -883,7 +883,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                         value={formData.chassis_plate}
                         onChange={(e) => setFormData({ ...formData, chassis_plate: e.target.value.toUpperCase() })}
                         placeholder="70-1234"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                       />
                     </div>
                   )}
@@ -895,7 +895,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                         type="text"
                         value={formData.seal_no}
                         onChange={(e) => setFormData({ ...formData, seal_no: e.target.value.toUpperCase() })}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                       />
                     </div>
                   )}
@@ -908,7 +908,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                         value={formData.remark}
                         onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
                         placeholder={t('remark')}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                       />
                     </div>
                   )}
@@ -928,7 +928,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                 <button
                   onClick={handleCreateSubmit}
                   disabled={!isCreateValid || loading}
-                  className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
+                  className="flex-1 py-2.5 bg-[#006cb3] hover:bg-[#00568f] disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   {loading ? '...' : t('cc_confirm')}

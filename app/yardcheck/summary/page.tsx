@@ -1,5 +1,7 @@
 "use client";
 
+import './fls-theme.css';
+
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -77,7 +79,7 @@ function PlateIcon({ className }: { className?: string }) {
 
 export default function YardCheckSummaryPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-[calc(100vh-80px)]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-[calc(100vh-80px)]"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#006cb3]" /></div>}>
       <YardCheckSummaryContent />
     </Suspense>
   );
@@ -126,12 +128,6 @@ function YardCheckSummaryContent() {
       else next.add(ty);
       return next;
     });
-  };
-
-  // Clicking an already-active status pill clears it back to "all" instead of
-  // forcing one to always be selected.
-  const toggleInStatusFilter = (status: 'passed' | 'not_passed' | 'pending') => {
-    setInStatusFilter((prev) => (prev === status ? null : status));
   };
 
   const matchesFilters = useCallback((c: YardCheck) => {
@@ -264,27 +260,27 @@ function YardCheckSummaryContent() {
   };
 
   const getTypeBadgeClass = (type: YardCheckType) => {
-    if (type === 'empty') return 'bg-amber-100 text-amber-800';
-    if (type === 'laden') return 'bg-blue-100 text-blue-800';
-    return 'bg-violet-100 text-violet-800';
+    if (type === 'empty') return 'bg-blue-50 text-[#006cb3]';
+    if (type === 'laden') return 'bg-emerald-50 text-emerald-800';
+    return 'bg-teal-50 text-teal-800';
   };
 
   // Size badge follows the record's type color; container no. always uses one
   // consistent accent so it reads as "the same kind of field" across every row.
   const getSizeBadgeClass = (type: YardCheckType) => {
-    if (type === 'empty') return 'bg-amber-50 text-amber-700';
-    if (type === 'laden') return 'bg-blue-50 text-blue-700';
-    return 'bg-violet-50 text-violet-700';
+    if (type === 'empty') return 'bg-blue-50 text-[#006cb3]';
+    if (type === 'laden') return 'bg-emerald-50 text-emerald-700';
+    return 'bg-teal-50 text-teal-700';
   };
-  const CONTAINER_NO_CLASS = 'text-indigo-600';
+  const CONTAINER_NO_CLASS = 'text-[#006cb3]';
 
   const getCardBorder = (c: YardCheck) => {
     if (c.type === 'empty') {
       const disp = getYardEmptyDisplayStatus(c);
-      return disp === 'passed' ? 'border-l-emerald-500' : 'border-l-red-500';
+      return disp === 'passed' ? 'border-l-emerald-500' : disp === 'failed' ? 'border-l-red-500' : 'border-l-amber-400';
     }
-    if (c.type === 'laden') return 'border-l-blue-500';
-    return 'border-l-violet-400';
+    if (c.type === 'laden') return 'border-l-emerald-500';
+    return 'border-l-teal-500';
   };
 
   const renderInYardCard = (c: YardCheck) => {
@@ -293,11 +289,11 @@ function YardCheckSummaryContent() {
     const statusLabel = disp === 'passed' ? t('yc_passed') : disp === 'failed' ? t('yc_failed') : disp === 'created' ? t('yc_pending') : null;
 
     return (
-      <div key={c.id} className={`border-l-[3px] ${getCardBorder(c)}`}>
+      <div key={c.id} data-yard-record={c.id} className={`overflow-hidden rounded-xl border border-slate-200 border-l-[3px] bg-white shadow-sm ${getCardBorder(c)}`}>
         {/* Row 1: type + id + size + chassis + menu */}
         <div className="flex items-center justify-between gap-2 px-3 pt-2">
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <span className={`text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded shrink-0 ${getTypeBadgeClass(c.type)}`}>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0 flex-1">
+            <span className={`text-[11px] font-semibold tracking-wide px-1.5 py-0.5 rounded shrink-0 ${getTypeBadgeClass(c.type)}`}>
               {t(`yc_type_${c.type}`).toUpperCase()}
             </span>
             <span className="font-mono text-sm font-semibold text-gray-900 flex items-center gap-1 w-[94px] shrink-0">
@@ -306,7 +302,7 @@ function YardCheckSummaryContent() {
             </span>
             {c.size && <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getSizeBadgeClass(c.type)}`}>{c.size}</span>}
             {c.container_no && (
-              <span className={`text-[10px] font-medium truncate shrink-0 ${CONTAINER_NO_CLASS}`}>{c.container_no}</span>
+              <span className={`text-xs font-medium break-all ${CONTAINER_NO_CLASS}`}>{c.container_no}</span>
             )}
             {c.type === 'chassis' && <span className="text-[10px] text-gray-400">{t('yc_no_container')}</span>}
             {c.yard_status === 'out' && (
@@ -315,20 +311,20 @@ function YardCheckSummaryContent() {
               </span>
             )}
           </div>
-          <button onClick={() => setActionCheck(actionCheck?.id === c.id ? null : c)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 shrink-0">
+          <button aria-label={`${t('yc_edit_record')} ${c.container_no || c.chassis_plate}`} onClick={() => setActionCheck(actionCheck?.id === c.id ? null : c)} className="flex h-11 w-11 items-center justify-center hover:bg-slate-100 rounded-lg text-slate-500 shrink-0">
             <MoreVertical className="w-4 h-4" />
           </button>
         </div>
 
         {c.yard_status === 'out' && disp !== 'passed' && (
           <div className="px-3 pt-1">
-            <p className="text-[10px] text-amber-600">{t('yc_already_out_hint')}</p>
+            <p className="text-xs text-amber-700">{t('yc_already_out_hint')}</p>
           </div>
         )}
 
         {hasNg && (
           <div className="px-3 pt-1">
-            <p className="text-[10px] text-red-600">
+            <p className="text-xs text-red-600">
               ⚠ {(c.checklist || []).filter((i) => i.result === 'fail').map((i) => i.item).join(', ')}
               {c.ng_detail ? ` · ${c.ng_detail}` : ''}
             </p>
@@ -337,18 +333,18 @@ function YardCheckSummaryContent() {
 
         {/* Row 2: status + time + action */}
         <div className={`flex items-center justify-between gap-2 px-3 py-1.5 mt-1 ${
-          hasNg ? 'bg-red-50' : disp === 'passed' ? 'bg-emerald-50' : disp === 'failed' || disp === 'created' ? 'bg-red-50' : 'bg-gray-50'
+          hasNg ? 'bg-red-50' : disp === 'passed' ? 'bg-emerald-50' : disp === 'failed' ? 'bg-red-50' : disp === 'created' ? 'bg-amber-50' : 'bg-gray-50'
         }`}>
-          <span className={`text-[10px] font-medium truncate ${
-            disp === 'passed' ? 'text-emerald-700' : disp ? 'text-red-700' : 'text-gray-500'
+          <span className={`min-w-0 text-xs font-medium ${
+            disp === 'passed' ? 'text-emerald-700' : disp === 'failed' ? 'text-red-700' : disp === 'created' ? 'text-amber-800' : 'text-slate-500'
           }`}>
             {statusLabel ? `${statusLabel} · ` : ''}{formatDateTimeRelative(c.checked_at)}
           </span>
           {disp && disp !== 'passed' ? (
             <button
               onClick={() => { setInitialInspect(c); setModalMode('update'); setModalOpen(true); }}
-              className={`shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md text-white font-medium ${
-                hasNg ? 'bg-amber-600' : 'bg-blue-600'
+              className={`shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg text-white font-medium ${
+                hasNg ? 'bg-amber-700 hover:bg-amber-800' : 'bg-[#006cb3] hover:bg-[#00568f]'
               }`}
             >
               {hasNg ? t('yc_reinspect') : t('yc_awaiting_inspection')}
@@ -357,7 +353,7 @@ function YardCheckSummaryContent() {
             <button
               onClick={() => setMarkOutCheck(c)}
               disabled={actionLoading}
-              className="shrink-0 w-24 text-center text-[10px] px-2 py-1 rounded-md bg-slate-700 text-white font-medium disabled:opacity-50"
+              className="shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-50"
             >
               {t('yc_mark_out')}
             </button>
@@ -368,136 +364,39 @@ function YardCheckSummaryContent() {
   };
 
   return (
-    <div className="flex flex-col overflow-hidden bg-background h-[calc(100vh-80px)] relative">
-      {/* Header */}
-      <div className="shrink-0 bg-white border-b border-border">
-        {/* Stat cards (also act as type filter toggles) */}
-        <div className="px-3 pt-2.5 pb-2.5">
+    <div className="fls-yard-summary mx-auto flex max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 h-[calc(100dvh-104px)] min-h-[360px] relative">
+      <div className="shrink-0 border-b border-slate-200 bg-white p-3">
+        <h1 className="sr-only">{t('yc_summary')}</h1>
+        <div data-testid="yard-toolbar" className="space-y-2 lg:grid lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-center lg:gap-3 lg:space-y-0">
           <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => toggleTypeFilter('empty')}
-              className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
-                typeFilters.has('empty') ? 'border-amber-500 bg-amber-100 ring-2 ring-amber-300' : 'border-amber-200 bg-amber-50'
-              }`}
-            >
-              <div className="text-[10px] font-semibold text-amber-700 mb-1">{t('yc_type_empty').toUpperCase()}</div>
-              <div className="text-2xl font-bold text-amber-900 leading-none">{stats.emptyTotal}</div>
-              <div className="mt-1.5 space-y-0.5">
-                <div className="flex items-center gap-1 text-[10px] text-emerald-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />{t('yc_passed')} {stats.emptyPassed}
-                </div>
-                <div className="flex items-center gap-1 text-[10px] text-amber-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />{t('yc_awaiting_inspection')} {stats.emptyPending}
-                </div>
-                <div className="flex items-center gap-1 text-[10px] text-red-600 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />{t('yc_not_passed')} {stats.emptyNotPassed}
-                </div>
-              </div>
-            </button>
-            <button
-              onClick={() => toggleTypeFilter('laden')}
-              className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
-                typeFilters.has('laden') ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-300' : 'border-blue-200 bg-blue-50'
-              }`}
-            >
-              <div className="text-[10px] font-semibold text-blue-700 mb-1">{t('yc_type_laden').toUpperCase()}</div>
-              <div className="text-2xl font-bold text-blue-900 leading-none">{stats.ladenTotal}</div>
-            </button>
-            <button
-              onClick={() => toggleTypeFilter('chassis')}
-              className={`text-left rounded-xl border p-2.5 transition-all flex flex-col ${
-                typeFilters.has('chassis') ? 'border-violet-500 bg-violet-100 ring-2 ring-violet-300' : 'border-violet-200 bg-violet-50'
-              }`}
-            >
-              <div className="text-[10px] font-semibold text-violet-700 mb-1">{t('yc_type_chassis').toUpperCase()}</div>
-              <div className="text-2xl font-bold text-violet-900 leading-none">{stats.chassisTotal}</div>
-            </button>
-          </div>
-        </div>
-
-        {/* Search + Update */}
-        <div className="px-3 pb-2.5 flex items-center gap-2">
-          <div className="flex-1">
-            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} />
-          </div>
-          <button
-            onClick={handleCopyYardUpdate}
-            title={t('yc_copy_yard_update')}
-            className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-          >
-            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-amber-600" />}
-          </button>
-          <button
-            onClick={() => openModal('update')}
-            title={t('yc_scan_container')}
-            className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-          >
-            <ScanLine className="w-4 h-4 text-amber-600" />
-          </button>
-        </div>
-
-        {/* IN / OUT tabs */}
-        <div className="flex px-3 pb-2.5 gap-2">
-          <button
-            onClick={() => setActiveTab('in')}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-colors ${
-              activeTab === 'in' ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'
-            }`}
-          >
-            {t('yc_in_yard_section').toUpperCase()} · {inYard.length}
-          </button>
-          <button
-            onClick={() => setActiveTab('out')}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-wide transition-colors ${
-              activeTab === 'out' ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
-            }`}
-          >
-            {t('yc_out_today_section').toUpperCase()} · {outList.length}
-          </button>
-        </div>
-
-        {activeTab === 'out' && (
-          <div className="flex px-3 pb-2.5 gap-1.5">
-            {(['24h', '7d', 'all'] as const).map((r) => (
-              <button
-                key={r}
-                onClick={() => setOutRange(r)}
-                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                  outRange === r ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                {t(`yc_range_${r}`)}
+            {([{ type: 'empty', count: stats.emptyTotal }, { type: 'laden', count: stats.ladenTotal }, { type: 'chassis', count: stats.chassisTotal }] as const).map(({ type, count }) => (
+              <button key={type} onClick={() => toggleTypeFilter(type)} aria-pressed={typeFilters.has(type)} className={`flex min-h-11 min-w-0 items-center justify-between gap-1 rounded-lg border px-2 text-xs font-semibold transition-colors ${typeFilters.has(type) ? 'border-[#006cb3] bg-blue-50 text-[#006cb3] ring-1 ring-[#006cb3]' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                <span className="min-w-0 break-words">{t(`yc_type_${type}`)}</span><span className="text-base tabular-nums text-[#006cb3]">{count}</span>
               </button>
             ))}
           </div>
-        )}
-
-        {activeTab === 'in' && (
-          <div className="flex px-3 pb-2.5 gap-1.5 flex-wrap">
-            {([
-              { key: 'passed', label: t('yc_passed') },
-              { key: 'not_passed', label: t('yc_not_passed') },
-              { key: 'pending', label: t('yc_awaiting_inspection') },
-            ] as const).map((f) => (
-              <button
-                key={f.key}
-                onClick={() => toggleInStatusFilter(f.key)}
-                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors ${
-                  inStatusFilter === f.key ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+          <div className="flex min-w-0 items-center gap-2">
+            <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} ringColor="focus:ring-[#006cb3]" className="min-w-0 [&_input]:h-11" />
+            <button onClick={handleCopyYardUpdate} aria-label={t('yc_copy_yard_update')} title={t('yc_copy_yard_update')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50">{copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}</button>
+            <button onClick={() => openModal('update')} aria-label={t('yc_scan_container')} title={t('yc_scan_container')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50"><ScanLine className="h-4 w-4" /></button>
+            <button onClick={() => openModal('create')} aria-label={t('yc_mode_create')} title={t('yc_mode_create')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#006cb3] text-white hover:bg-[#00568f]"><Plus className="h-5 w-5" /></button>
           </div>
-        )}
+          <div className="grid min-w-0 grid-cols-2 gap-2">
+            <div className="flex min-w-0 rounded-lg border border-slate-200 bg-slate-100 p-0.5">
+              {(['in', 'out'] as const).map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} aria-pressed={activeTab === tab} className={`min-h-10 min-w-0 flex-1 rounded-md px-1 text-xs font-semibold ${activeTab === tab ? 'bg-[#006cb3] text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>{t(tab === 'in' ? 'yc_in_yard_section' : 'yc_out_today_section')} {tab === 'in' ? inYard.length : outList.length}</button>)}
+            </div>
+            {activeTab === 'in' ? <select aria-label={t('yc_checklist_title')} value={inStatusFilter || ''} onChange={(event) => setInStatusFilter(event.target.value as typeof inStatusFilter || null)} className="h-11 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700">
+              <option value="">{t('all')}</option><option value="passed">{t('yc_passed')} {stats.emptyPassed}</option><option value="not_passed">{t('yc_not_passed')} {stats.emptyNotPassed}</option><option value="pending">{t('yc_awaiting_inspection')} {stats.emptyPending}</option>
+            </select> : <select aria-label={t('yc_out_today_section')} value={outRange} onChange={(event) => setOutRange(event.target.value as typeof outRange)} className="h-11 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700">{(['24h', '7d', 'all'] as const).map((range) => <option key={range} value={range}>{t(`yc_range_${range}`)}</option>)}</select>}
+          </div>
+        </div>
       </div>
 
       {/* List */}
-      <div className="flex-1 px-3 py-2 overflow-y-auto">
+      <div className="min-h-0 flex-1 px-3 py-3 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-10">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600" />
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#006cb3]" />
           </div>
         ) : activeTab === 'in' ? (
           inYard.length === 0 ? (
@@ -505,7 +404,7 @@ function YardCheckSummaryContent() {
               {t('yc_no_records')}
             </div>
           ) : (
-            <div className="bg-white rounded-lg border border-emerald-200 divide-y-4 divide-gray-50 overflow-hidden">
+            <div className="space-y-2">
               {inYard.map(renderInYardCard)}
             </div>
           )
@@ -514,7 +413,7 @@ function YardCheckSummaryContent() {
             {t('yc_no_records')}
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-200">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white divide-y divide-slate-100">
             {outList.map((c) => {
               const canView = c.type === 'empty';
               const Row = canView ? 'button' : 'div';
@@ -522,7 +421,7 @@ function YardCheckSummaryContent() {
                 <Row
                   key={c.id}
                   onClick={canView ? () => openViewModal(c) : undefined}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] text-left ${canView ? 'hover:bg-gray-100' : ''}`}
+                  className={`w-full flex flex-wrap items-center gap-2 px-3 py-3 text-xs text-left ${canView ? 'hover:bg-gray-100' : ''}`}
                 >
                   <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
                     {t(`yc_type_${c.type}`)}
@@ -531,7 +430,7 @@ function YardCheckSummaryContent() {
                     <PlateIcon className="w-3 h-3 text-gray-400 shrink-0" />
                     <span className="tabular-nums truncate">{c.chassis_plate}</span>
                   </span>
-                  <span className={`truncate flex-1 font-mono font-medium ${CONTAINER_NO_CLASS}`}>{c.container_no || ''}</span>
+                  <span className={`min-w-24 flex-1 break-all font-mono font-medium ${CONTAINER_NO_CLASS}`}>{c.container_no || ''}</span>
                   <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
                   <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
                 </Row>
@@ -539,17 +438,6 @@ function YardCheckSummaryContent() {
             })}
           </div>
         )}
-      </div>
-
-      {/* Floating action button: straight to Create */}
-      <div className="absolute bottom-5 right-4 z-30">
-        <button
-          onClick={() => openModal('create')}
-          title={t('yc_mode_create')}
-          className="w-14 h-14 rounded-full bg-amber-500 hover:bg-amber-600 text-white shadow-xl flex items-center justify-center transition-transform"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
       </div>
 
       {/* Create/Update modal */}

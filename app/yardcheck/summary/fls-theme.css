@@ -1,0 +1,59 @@
+.fls-yard-summary {
+  --primary: #006cb3;
+  --primary-hover: #00568f;
+  --primary-light: #eff6ff;
+  font-family: Arial, Tahoma, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.fls-yard-summary button:focus-visible,
+.fls-yard-summary select:focus-visible,
+.fls-yard-header a:focus-visible,
+.fls-yard-header button:focus-visible {
+  outline: 2px solid #006cb3;
+  outline-offset: 2px;
+}
+
+.fls-yard-summary button {
+  touch-action: manipulation;
+}
+
+.fls-yard-summary input,
+.fls-yard-summary select,
+.fls-yard-summary textarea {
+  border-color: #e2e8f0;
+}
+
+.fls-yard-summary input:focus,
+.fls-yard-summary select:focus,
+.fls-yard-summary textarea:focus {
+  outline-color: #006cb3;
+}
+
+.fls-yard-header {
+  min-height: 72px;
+}
+
+.fls-yard-header > a,
+.fls-yard-header > div {
+  min-width: 0;
+}
+
+@media (max-width: 420px) {
+  .fls-yard-header {
+    padding-inline: 12px;
+  }
+  .fls-yard-header > div {
+    gap: 0;
+  }
+  .fls-yard-header > div > a,
+  .fls-yard-header > div > button {
+    padding-inline: 6px;
+  }
+  .fls-yard-header > div > div > button {
+    gap: 4px;
+    padding-inline: 6px;
+    font-size: 12px;
+  }
+}
