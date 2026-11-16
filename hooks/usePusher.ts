@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import Pusher from 'pusher-js';
 import type { Channel } from 'pusher-js';
 
@@ -9,6 +9,7 @@ export const PUSHER_CHANNELS = {
   JOBS: 'jobs',
   BOOKINGS: 'bookings',
   DOCKS: 'docks',
+  YARD_CHECK: 'yard-check',
 } as const;
 
 export const PUSHER_EVENTS = {
@@ -20,6 +21,7 @@ export const PUSHER_EVENTS = {
   BOOKING_UPDATED: 'booking:updated',
   BOOKING_LINKED: 'booking:linked',
   DOCK_UPDATED: 'dock:updated',
+  YARD_CHECK_CHANGED: 'yard-check:changed',
 } as const;
 
 // Singleton Pusher instance
@@ -55,6 +57,14 @@ interface UsePusherOptions<T> {
   event: string;
   onEvent: (data: T) => void;
   enabled?: boolean;
+  /**
+   * Called every time the channel subscription succeeds, including after a
+   * dropped-connection reconnect (Pusher resubscribes automatically and
+   * re-fires this). Without it, a client that's briefly disconnected has no
+   * way to notice it missed an event in the gap - it just sits stale until
+   * the next unrelated event or a manual refresh.
+   */
+  onSubscribed?: () => void;
 }
 
 export function usePusher<T>({
@@ -62,14 +72,19 @@ export function usePusher<T>({
   event,
   onEvent,
   enabled = true,
+  onSubscribed,
 }: UsePusherOptions<T>) {
   const channelRef = useRef<Channel | null>(null);
   const onEventRef = useRef(onEvent);
+  const onSubscribedRef = useRef(onSubscribed);
 
-  // Update callback ref
+  // Update callback refs
   useEffect(() => {
     onEventRef.current = onEvent;
   }, [onEvent]);
+  useEffect(() => {
+    onSubscribedRef.current = onSubscribed;
+  }, [onSubscribed]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -85,11 +100,17 @@ export function usePusher<T>({
       onEventRef.current(data);
     });
 
+    // Re-fires on every reconnect, not just the first subscribe
+    channelRef.current.bind('pusher:subscription_succeeded', () => {
+      onSubscribedRef.current?.();
+    });
+
     console.log(`Pusher: subscribed to ${channel}:${event}`);
 
     return () => {
       if (channelRef.current) {
         channelRef.current.unbind(event);
+        channelRef.current.unbind('pusher:subscription_succeeded');
         pusher.unsubscribe(channel);
         console.log(`Pusher: unsubscribed from ${channel}:${event}`);
       }
@@ -202,5 +223,20 @@ export function useDockEvents(onDockUpdated: (data: DockEventData) => void) {
     channel: PUSHER_CHANNELS.DOCKS,
     event: PUSHER_EVENTS.DOCK_UPDATED,
     onEvent: onDockUpdated,
+  });
+}
+
+/**
+ * Hook for yard check events - fires on any create/update/mark-out/delete
+ * from any client, so a page left open stays in sync without a manual refresh.
+ * Also refetches on every (re)subscribe, so a client that was briefly
+ * disconnected catches up instead of silently keeping stale data.
+ */
+export function useYardCheckEvents(onChanged: () => void) {
+  usePusher({
+    channel: PUSHER_CHANNELS.YARD_CHECK,
+    event: PUSHER_EVENTS.YARD_CHECK_CHANGED,
+    onEvent: onChanged,
+    onSubscribed: onChanged,
   });
 }

@@ -359,6 +359,11 @@
   "scanner_manual_hint": "You can also close this screen and enter the number manually.",
   "scanner_error_processing": "Could not read the image. Check your connection and try again.",
   "scanner_error_image": "Cannot open this image. Please select another photo.",
+  "scanner_line_unsupported_title": "LINE's in-app browser doesn't support the camera",
+  "scanner_line_unsupported_body": "Tap the ⋯ menu in the top right and choose \"Open in browser\", or copy the link below and open it in Chrome/Safari instead.",
+  "scanner_line_gallery_hint": "Or take the photo with your phone's own camera first, then use \"Choose Photo\" below.",
+  "scanner_copy_link": "Copy Link",
+  "scanner_link_copied": "Copied",
   "yc_photo_source": "Add / replace photo",
   "yc_take_photo": "Take photo",
   "yc_choose_from_device": "Choose from device"

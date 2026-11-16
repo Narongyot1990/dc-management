@@ -10,6 +10,7 @@ import { formatDateTimeRelative, formatDate, formatTime, formatDateTime } from '
 import { getYardEmptyDisplayStatus } from '@/utils/styles';
 import { YARD_NAME } from '@/utils/constants';
 import { useYardChecks } from '@/hooks';
+import { useYardCheckEvents } from '@/hooks/usePusher';
 import { SearchInput, BottomSheet } from '@/components/ui';
 import { YardCheckModal, type YardCheckModalMode } from '@/components/yardcheck/YardCheckModal';
 import {
@@ -107,6 +108,10 @@ function YardCheckSummaryContent() {
   const [copied, setCopied] = useState(false);
 
   const { checks, loading, refetch, markOut, deleteCheck, actionLoading } = useYardChecks({});
+
+  // Real-time: any create/update/mark-out/delete from any client refetches
+  // this list, so a page left open stays in sync without a manual refresh.
+  useYardCheckEvents(refetch);
 
   // Deep link: /yardcheck/summary?inspect=<id> opens the checklist directly.
   useEffect(() => {

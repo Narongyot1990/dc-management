@@ -359,6 +359,11 @@
   "scanner_manual_hint": "ဤမျက်နှာပြင်ကို ပိတ်ပြီး နံပါတ်ကို ကိုယ်တိုင်ရိုက်ထည့်နိုင်သည်။",
   "scanner_error_processing": "ပုံကို ဖတ်မရပါ။ အင်တာနက်ချိတ်ဆက်မှုကို စစ်ပြီး ထပ်စမ်းပါ။",
   "scanner_error_image": "ဤပုံကို ဖွင့်မရပါ။ အခြားပုံရွေးပါ။",
+  "scanner_line_unsupported_title": "LINE အက်ပ်အတွင်း browser သည် camera ကို မပံ့ပိုးပါ",
+  "scanner_line_unsupported_body": "ညာဘက်အပေါ်ရှိ ⋯ menu ကိုနှိပ်ပြီး \"Open in browser\" ကိုရွေးပါ သို့မဟုတ် အောက်ပါလင့်ခ်ကို ကူးယူပြီး Chrome/Safari တွင်ဖွင့်ပါ",
+  "scanner_line_gallery_hint": "သို့မဟုတ် ဖုန်း camera ဖြင့် ဓာတ်ပုံရိုက်ပြီး အောက်ရှိ \"ပုံရွေးရန်\" ကိုသုံးနိုင်ပါသည်",
+  "scanner_copy_link": "လင့်ခ် ကူးယူရန်",
+  "scanner_link_copied": "ကူးယူပြီးပါပြီ",
   "yc_photo_source": "ပုံထည့်ရန် / အစားထိုးရန်",
   "yc_take_photo": "ဓာတ်ပုံရိုက်ရန်",
   "yc_choose_from_device": "စက်ထဲမှပုံရွေးရန်"

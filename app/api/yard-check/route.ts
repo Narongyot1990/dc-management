@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import YardCheck from '@/lib/models/YardCheck';
+import { triggerYardCheckEvent } from '@/lib/pusher';
 
 // Helper: Generate next check ID (YC001, YC002, ...)
 async function generateCheckId(): Promise<string> {
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
       history: [{ action: 'create', at: now }],
     });
 
+    await triggerYardCheckEvent(check.id);
     return NextResponse.json({ success: true, data: check }, { status: 201 });
   } catch (error) {
     console.error('POST /api/yard-check error:', error);
@@ -174,6 +176,7 @@ export async function PUT(request: NextRequest) {
     check.updated_at = new Date();
     await check.save();
 
+    await triggerYardCheckEvent(check.id);
     return NextResponse.json({ success: true, data: check });
   } catch (error) {
     console.error('PUT /api/yard-check error:', error);
@@ -206,6 +209,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    await triggerYardCheckEvent(id);
     return NextResponse.json({ success: true, message: `Deleted ${id}` });
   } catch (error) {
     console.error('DELETE /api/yard-check error:', error);

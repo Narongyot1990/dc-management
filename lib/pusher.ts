@@ -42,6 +42,7 @@ export const PUSHER_CHANNELS = {
   JOBS: 'jobs',
   BOOKINGS: 'bookings',
   DOCKS: 'docks',
+  YARD_CHECK: 'yard-check',
 } as const;
 
 export const PUSHER_EVENTS = {
@@ -58,6 +59,10 @@ export const PUSHER_EVENTS = {
 
   // Dock events
   DOCK_UPDATED: 'dock:updated',
+
+  // Yard check events - a single "changed" event is enough since every
+  // listener just needs to know "go refetch", not what specifically changed.
+  YARD_CHECK_CHANGED: 'yard-check:changed',
 } as const;
 
 // =============================================
@@ -129,6 +134,20 @@ export async function triggerDockEvent(data: DockEventData) {
     const pusher = getPusher();
     await pusher.trigger(PUSHER_CHANNELS.DOCKS, PUSHER_EVENTS.DOCK_UPDATED, data);
     console.log(`Pusher: dock:updated triggered`, data.dock);
+  } catch (error) {
+    console.error('Pusher trigger error:', error);
+  }
+}
+
+/**
+ * Trigger yard check event (create/update/mark-out/delete all funnel through
+ * this - listeners just refetch, they don't need a payload).
+ */
+export async function triggerYardCheckEvent(id: string) {
+  try {
+    const pusher = getPusher();
+    await pusher.trigger(PUSHER_CHANNELS.YARD_CHECK, PUSHER_EVENTS.YARD_CHECK_CHANGED, { id });
+    console.log('Pusher: yard-check:changed triggered', id);
   } catch (error) {
     console.error('Pusher trigger error:', error);
   }

@@ -359,6 +359,11 @@
   "scanner_manual_hint": "也可以关闭此页面并手动输入箱号。",
   "scanner_error_processing": "无法读取照片。请检查网络连接后重试。",
   "scanner_error_image": "无法打开此图片，请选择其他照片。",
+  "scanner_line_unsupported_title": "LINE 内置浏览器不支持相机",
+  "scanner_line_unsupported_body": "请点击右上角 ⋯ 菜单，选择「在浏览器中打开」，或复制下方链接到 Chrome/Safari 中打开。",
+  "scanner_line_gallery_hint": "或者先用手机相机拍照，再点击下方「选择图片」。",
+  "scanner_copy_link": "复制链接",
+  "scanner_link_copied": "已复制",
   "yc_photo_source": "添加 / 替换照片",
   "yc_take_photo": "拍照",
   "yc_choose_from_device": "从设备选择"

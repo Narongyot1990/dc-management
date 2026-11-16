@@ -359,6 +359,11 @@
   "scanner_manual_hint": "สามารถปิดหน้านี้แล้วกรอกหมายเลขด้วยตนเองได้",
   "scanner_error_processing": "อ่านภาพไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง",
   "scanner_error_image": "เปิดภาพนี้ไม่ได้ กรุณาเลือกภาพอื่น",
+  "scanner_line_unsupported_title": "เบราว์เซอร์ใน LINE ไม่รองรับกล้อง",
+  "scanner_line_unsupported_body": "กรุณากดเมนู ⋯ มุมขวาบน แล้วเลือก \"เปิดด้วยเบราว์เซอร์อื่น\" หรือคัดลอกลิงก์ไปเปิดใน Chrome/Safari แทน",
+  "scanner_line_gallery_hint": "หรือจะถ่ายรูปด้วยกล้องมือถือปกติไว้ก่อน แล้วกด \"เลือกภาพ\" ด้านล่างแทนก็ได้",
+  "scanner_copy_link": "คัดลอกลิงก์",
+  "scanner_link_copied": "คัดลอกแล้ว",
   "yc_photo_source": "เพิ่ม / เปลี่ยนภาพ",
   "yc_take_photo": "ถ่ายภาพ",
   "yc_choose_from_device": "เลือกภาพจากเครื่อง"
