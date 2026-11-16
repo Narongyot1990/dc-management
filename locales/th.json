@@ -1,6 +1,15 @@
 {
   "app_title": "Yard Management",
   "profile": "โปรไฟล์",
+  "login_title": "เข้าสู่ระบบ",
+  "login_username": "ชื่อผู้ใช้",
+  "login_password": "รหัสผ่าน",
+  "login_submit": "เข้าสู่ระบบ",
+  "login_logging_in": "กำลังเข้าสู่ระบบ...",
+  "login_error_invalid": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+  "login_logout": "ออกจากระบบ",
+  "login_logout_failed": "ออกจากระบบไม่สำเร็จ กรุณาลองใหม่",
+  "login_readonly_hint": "เข้าสู่ระบบเพื่อสร้าง/แก้ไข/ลบข้อมูล",
   "planner": "Planner",
   "driver": "Driver",
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Job } from '@/types';
 import { useJobEvents } from '@/hooks/usePusher';
@@ -28,6 +29,7 @@ interface JobDashboardProps {
 
 export function JobDashboard({ backUrl, backLabel }: JobDashboardProps) {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'issue' | 'cancelled'>('all');
@@ -602,7 +604,8 @@ export function JobDashboard({ backUrl, backLabel }: JobDashboardProps) {
                 <>
                   <button
                     onClick={() => setIsEditMode(true)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !isAuthenticated}
+                    title={!isAuthenticated ? t('login_readonly_hint') : undefined}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
                   >
                     {t('edit') || 'Edit'}
@@ -610,7 +613,8 @@ export function JobDashboard({ backUrl, backLabel }: JobDashboardProps) {
                   {(selectedJob.status === 'pending') && (
                     <button
                       onClick={() => handleCancelJob(selectedJob)}
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !isAuthenticated}
+                      title={!isAuthenticated ? t('login_readonly_hint') : undefined}
                       className="flex-1 bg-gray-700 hover:bg-gray-800 disabled:bg-gray-300 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
                     >
                       <X className="w-4 h-4" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
@@ -38,6 +39,7 @@ interface OccupiedDockInfo {
 
 export default function PlannerPage() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const [selectedJobType, setSelectedJobType] = useState<JobType | null>(null);
   const [formData, setFormData] = useState<FormData>({
     container_no: '',
@@ -782,9 +784,11 @@ export default function PlannerPage() {
                 onClick={handleSubmit}
                 disabled={
                   loading ||
+                  !isAuthenticated ||
                   (selectedJobType === 'in' && (!formData.container_no || !formData.dock_to)) ||
                   (selectedJobType === 'out' && (!formData.container_no || !formData.dock_from))
                 }
+                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-3 rounded-lg transition-colors text-sm md:text-base flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -844,7 +848,8 @@ export default function PlannerPage() {
             <div className="flex gap-3">
               <button
                 onClick={handleMoveOut}
-                disabled={loading}
+                disabled={loading || !isAuthenticated}
+                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
               >
                 <ArrowUpFromLine className="w-4 h-4" />

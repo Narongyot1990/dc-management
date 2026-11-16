@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import type { Job, IssueType } from '@/types';
@@ -20,6 +21,7 @@ import {
 
 export default function DriverPage() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [focusedJobId, setFocusedJobId] = useState<string | null>(null);
@@ -349,14 +351,18 @@ export default function DriverPage() {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={() => handleComplete(displayJob)}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
+                disabled={!isAuthenticated}
+                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 {t('job_done')}
               </button>
               <button
                 onClick={() => handleReportIssue(displayJob)}
-                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
+                disabled={!isAuthenticated}
+                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+                className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
               >
                 <AlertTriangle className="w-5 h-5" />
                 {t('report_issue')}

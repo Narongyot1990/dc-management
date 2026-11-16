@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { ContainerCheck, ContainerCheckFormData, ContainerCheckLocation, ContainerCheckStatus, ContainerScanResult } from '@/types';
@@ -43,6 +44,7 @@ export default function ContainerCheckPage() {
 
 function ContainerCheckForm() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState<ContainerCheckFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
@@ -545,7 +547,8 @@ function ContainerCheckForm() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!isFormValid || loading}
+            disabled={!isFormValid || loading || !isAuthenticated}
+            title={!isAuthenticated ? t('login_readonly_hint') : undefined}
             className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
           >
             <Check className="w-4 h-4" />

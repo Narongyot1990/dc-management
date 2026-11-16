@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
+import { requireAuth } from '@/lib/auth';
 
 // Stores a failed-checklist-item photo in Vercel Blob and returns its public URL.
 // Client resizes/compresses before upload; this route just hands the bytes off.
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     const formData = await request.formData();
     const file = formData.get('file');
 

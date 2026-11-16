@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Booking from '@/lib/models/Booking';
 import { triggerBookingEvent, PUSHER_EVENTS } from '@/lib/pusher';
+import { requireAuth } from '@/lib/auth';
 
 // GET /api/bookings - Get all bookings
 export async function GET(request: NextRequest) {
@@ -66,6 +67,9 @@ async function generateBookingId(): Promise<string> {
 // POST /api/bookings - Create new booking
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
 
     const body = await request.json();

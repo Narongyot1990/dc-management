@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useMemo } from 'react';
 import type { ContainerCheck, ContainerCheckHistory, ContainerCheckVendor, ContainerCheckStatus, ContainerCheckLocation } from '@/types';
 import { CC_VENDORS } from '@/utils/constants';
@@ -54,6 +55,7 @@ const buildTimeline = (history?: ContainerCheckHistory[], checkedAt?: string | D
 
 export default function ContainerCheckSummaryPage() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState<string>(getBangkokDateString(-7));
@@ -313,8 +315,8 @@ export default function ContainerCheckSummaryPage() {
                 return (
                   <div
                     key={check.id}
-                    onClick={checkerMode ? () => setActionCheck(check) : undefined}
-                    className={`px-3 py-2.5 border-l-[3px] ${badge.border} ${checkerMode ? 'cursor-pointer active:bg-gray-50' : ''}`}
+                    onClick={checkerMode && isAuthenticated ? () => setActionCheck(check) : undefined}
+                    className={`px-3 py-2.5 border-l-[3px] ${badge.border} ${checkerMode && isAuthenticated ? 'cursor-pointer active:bg-gray-50' : ''}`}
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -326,12 +328,14 @@ export default function ContainerCheckSummaryPage() {
                           {getStatusLabel(check.status)}
                         </span>
                       </div>
-                      <button
-                        onClick={() => setActionCheck(actionCheck?.id === check.id ? null : check)}
-                        className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors shrink-0 ml-2"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
+                      {isAuthenticated && (
+                        <button
+                          onClick={() => setActionCheck(actionCheck?.id === check.id ? null : check)}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors shrink-0 ml-2"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between text-[11px]">

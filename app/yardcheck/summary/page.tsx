@@ -3,6 +3,7 @@
 import './fls-theme.css';
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { YardCheck, YardCheckType } from '@/types';
@@ -88,6 +89,7 @@ export default function YardCheckSummaryPage() {
 
 function YardCheckSummaryContent() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,9 +116,10 @@ function YardCheckSummaryContent() {
   useYardCheckEvents(refetch);
 
   // Deep link: /yardcheck/summary?inspect=<id> opens the checklist directly.
+  // Read-only visitors can't submit an inspection anyway, so skip this entirely.
   useEffect(() => {
     const inspectId = searchParams.get('inspect');
-    if (!inspectId || loading) return;
+    if (!inspectId || loading || !isAuthenticated) return;
     const record = checks.find((c) => c.id === inspectId);
     if (record) {
       setInitialInspect(record);
@@ -124,7 +127,7 @@ function YardCheckSummaryContent() {
       setModalOpen(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, loading]);
+  }, [searchParams, loading, isAuthenticated]);
 
   const toggleTypeFilter = (ty: YardCheckType) => {
     setTypeFilters((prev) => {
@@ -316,9 +319,11 @@ function YardCheckSummaryContent() {
               </span>
             )}
           </div>
-          <button aria-label={`${t('yc_edit_record')} ${c.container_no || c.chassis_plate}`} onClick={() => setActionCheck(actionCheck?.id === c.id ? null : c)} className="flex h-11 w-11 items-center justify-center hover:bg-slate-100 rounded-lg text-slate-500 shrink-0">
-            <MoreVertical className="w-4 h-4" />
-          </button>
+          {isAuthenticated && (
+            <button aria-label={`${t('yc_edit_record')} ${c.container_no || c.chassis_plate}`} onClick={() => setActionCheck(actionCheck?.id === c.id ? null : c)} className="flex h-11 w-11 items-center justify-center hover:bg-slate-100 rounded-lg text-slate-500 shrink-0">
+              <MoreVertical className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {c.yard_status === 'out' && disp !== 'passed' && (
@@ -348,7 +353,9 @@ function YardCheckSummaryContent() {
           {disp && disp !== 'passed' ? (
             <button
               onClick={() => { setInitialInspect(c); setModalMode('update'); setModalOpen(true); }}
-              className={`shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg text-white font-medium ${
+              disabled={!isAuthenticated}
+              title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+              className={`shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed ${
                 hasNg ? 'bg-amber-700 hover:bg-amber-800' : 'bg-[#006cb3] hover:bg-[#00568f]'
               }`}
             >
@@ -357,8 +364,9 @@ function YardCheckSummaryContent() {
           ) : (
             <button
               onClick={() => setMarkOutCheck(c)}
-              disabled={actionLoading}
-              className="shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-50"
+              disabled={actionLoading || !isAuthenticated}
+              title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+              className="shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {t('yc_mark_out')}
             </button>
@@ -383,8 +391,8 @@ function YardCheckSummaryContent() {
           <div className="flex min-w-0 items-center gap-2">
             <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} ringColor="focus:ring-[#006cb3]" className="min-w-0 [&_input]:h-11" />
             <button onClick={handleCopyYardUpdate} aria-label={t('yc_copy_yard_update')} title={t('yc_copy_yard_update')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50">{copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}</button>
-            <button onClick={() => openModal('update')} aria-label={t('yc_scan_container')} title={t('yc_scan_container')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50"><ScanLine className="h-4 w-4" /></button>
-            <button onClick={() => openModal('create')} aria-label={t('yc_mode_create')} title={t('yc_mode_create')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#006cb3] text-white hover:bg-[#00568f]"><Plus className="h-5 w-5" /></button>
+            <button onClick={() => openModal('update')} disabled={!isAuthenticated} aria-label={t('yc_scan_container')} title={!isAuthenticated ? t('login_readonly_hint') : t('yc_scan_container')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"><ScanLine className="h-4 w-4" /></button>
+            <button onClick={() => openModal('create')} disabled={!isAuthenticated} aria-label={t('yc_mode_create')} title={!isAuthenticated ? t('login_readonly_hint') : t('yc_mode_create')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#006cb3] text-white hover:bg-[#00568f] disabled:opacity-40 disabled:cursor-not-allowed"><Plus className="h-5 w-5" /></button>
           </div>
           <div className="grid min-w-0 grid-cols-2 gap-2">
             <div className="flex min-w-0 rounded-lg border border-slate-200 bg-slate-100 p-0.5">

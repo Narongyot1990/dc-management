@@ -1,6 +1,15 @@
 {
   "app_title": "堆场管理系统",
   "profile": "个人资料",
+  "login_title": "登录",
+  "login_username": "用户名",
+  "login_password": "密码",
+  "login_submit": "登录",
+  "login_logging_in": "登录中...",
+  "login_error_invalid": "用户名或密码不正确",
+  "login_logout": "登出",
+  "login_logout_failed": "登出失败，请重试",
+  "login_readonly_hint": "登录后才能新增、编辑或删除资料",
   "planner": "计划员",
   "driver": "司机",
 

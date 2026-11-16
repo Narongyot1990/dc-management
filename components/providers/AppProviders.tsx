@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 
 interface AppProvidersProps {
@@ -11,8 +12,10 @@ interface AppProvidersProps {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <LanguageProvider>
-      <ConnectionStatus />
-      {children}
+      <AuthProvider>
+        <ConnectionStatus />
+        {children}
+      </AuthProvider>
     </LanguageProvider>
   );
 }

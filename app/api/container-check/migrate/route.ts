@@ -1,10 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import ContainerCheck from '@/lib/models/ContainerCheck';
+import { requireAuth } from '@/lib/auth';
 
-// GET /api/container-check/migrate — one-time migration
-export async function GET() {
+// GET /api/container-check/migrate — one-time migration (writes data, so it
+// needs the same auth gate as any other mutating route despite the GET verb)
+export async function GET(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
 
     // Migration: location

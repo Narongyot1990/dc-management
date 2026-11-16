@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Booking, BookingFormData, ScanResult, BookingStatus } from '@/types';
 import { formatDateTime, getBangkokDateString } from '@/utils/format';
@@ -40,6 +41,7 @@ const initialFormData: FormData = {
 
 export default function BookingManagementPage() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -393,7 +395,9 @@ export default function BookingManagementPage() {
           </h1>
           <button
             onClick={handleAddClick}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+            disabled={!isAuthenticated}
+            title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             {t('add')}
@@ -523,14 +527,18 @@ export default function BookingManagementPage() {
                         <div className="flex gap-2 pt-1">
                           <button
                             onClick={() => handleEditClick(booking)}
-                            className="flex-1 py-1.5 px-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] rounded-lg transition-colors flex items-center justify-center gap-1"
+                            disabled={!isAuthenticated}
+                            title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+                            className="flex-1 py-1.5 px-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-40 text-gray-700 text-[10px] rounded-lg transition-colors flex items-center justify-center gap-1"
                           >
                             <Edit3 className="w-3 h-3" />
                             {t('edit')}
                           </button>
                           <button
                             onClick={() => handleDeleteClick(booking)}
-                            className="flex-1 py-1.5 px-2 bg-red-100 hover:bg-red-200 text-red-700 text-[10px] rounded-lg transition-colors flex items-center justify-center gap-1"
+                            disabled={!isAuthenticated}
+                            title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+                            className="flex-1 py-1.5 px-2 bg-red-100 hover:bg-red-200 disabled:opacity-40 text-red-700 text-[10px] rounded-lg transition-colors flex items-center justify-center gap-1"
                           >
                             <Trash2 className="w-3 h-3" />
                             {t('delete')}

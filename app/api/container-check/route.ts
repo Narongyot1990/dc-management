@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import ContainerCheck from '@/lib/models/ContainerCheck';
+import { requireAuth } from '@/lib/auth';
 
 // Helper: Generate next check ID (CC001, CC002, ...)
 async function generateCheckId(): Promise<string> {
@@ -87,6 +88,9 @@ export async function GET(request: NextRequest) {
 // POST /api/container-check (upsert: ถ้า container_no ซ้ำ จะ update แทน)
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
     const body = await request.json();
 
@@ -167,6 +171,9 @@ export async function POST(request: NextRequest) {
 // PUT /api/container-check (update by id)
 export async function PUT(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
     const body = await request.json();
 
@@ -220,6 +227,9 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/container-check
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

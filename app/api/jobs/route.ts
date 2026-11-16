@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Job from '@/lib/models/Job';
 import Booking from '@/lib/models/Booking';
 import { triggerJobEvent, PUSHER_EVENTS } from '@/lib/pusher';
+import { requireAuth } from '@/lib/auth';
 
 // Helper: Generate next job ID (safer than countDocuments)
 async function generateJobId(): Promise<string> {
@@ -83,6 +84,9 @@ export async function GET(request: NextRequest) {
 // POST /api/jobs - Create new job
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
 
     const body = await request.json();

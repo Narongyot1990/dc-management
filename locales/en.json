@@ -1,6 +1,15 @@
 {
   "app_title": "Yard Management",
   "profile": "Profile",
+  "login_title": "Login",
+  "login_username": "Username",
+  "login_password": "Password",
+  "login_submit": "Login",
+  "login_logging_in": "Logging in...",
+  "login_error_invalid": "Invalid username or password",
+  "login_logout": "Logout",
+  "login_logout_failed": "Logout failed, please try again",
+  "login_readonly_hint": "Login to create, edit, or delete records",
   "planner": "Planner",
   "driver": "Driver",
 

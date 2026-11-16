@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Job from '@/lib/models/Job';
 import Booking from '@/lib/models/Booking';
 import { triggerJobEvent, triggerDockEvent, triggerBookingEvent, PUSHER_EVENTS } from '@/lib/pusher';
+import { requireAuth } from '@/lib/auth';
 
 // Helper: Sync booking status based on job completion
 async function syncBookingStatus(job: {
@@ -96,6 +97,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     const { id } = await params;
     await connectDB();
 
@@ -193,6 +197,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     const { id } = await params;
     await connectDB();
 

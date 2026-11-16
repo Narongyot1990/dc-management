@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Booking from '@/lib/models/Booking';
 import { triggerBookingEvent, PUSHER_EVENTS } from '@/lib/pusher';
+import { requireAuth } from '@/lib/auth';
 
 // GET /api/bookings/[id] - Get single booking
 export async function GET(
@@ -37,6 +38,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     const { id } = await params;
     await connectDB();
 
@@ -82,6 +86,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     const { id } = await params;
     await connectDB();
 

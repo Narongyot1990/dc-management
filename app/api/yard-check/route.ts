@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import YardCheck from '@/lib/models/YardCheck';
 import { triggerYardCheckEvent } from '@/lib/pusher';
+import { requireAuth } from '@/lib/auth';
 
 // Helper: Generate next check ID (YC001, YC002, ...)
 async function generateCheckId(): Promise<string> {
@@ -69,6 +70,9 @@ export async function GET(request: NextRequest) {
 // POST /api/yard-check (always creates a new record — each yard visit is a new event)
 export async function POST(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
     const body = await request.json();
 
@@ -121,6 +125,9 @@ export async function POST(request: NextRequest) {
 // PUT /api/yard-check (update by id: checklist progress, mark OUT, or remark)
 export async function PUT(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
     const body = await request.json();
 
@@ -190,6 +197,9 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/yard-check
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     await connectDB();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
