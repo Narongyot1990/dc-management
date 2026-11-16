@@ -4,7 +4,7 @@ import './fls-theme.css';
 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState, useMemo, useCallback, useEffect, Suspense } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect, Suspense, type PointerEvent as ReactPointerEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { YardCheck, YardCheckType } from '@/types';
 import { formatDateTimeRelative, formatDate, formatTime, formatDateTime } from '@/utils/format';
@@ -108,6 +108,108 @@ function YardCheckSummaryContent() {
   const [initialEdit, setInitialEdit] = useState<YardCheck | null>(null);
   const [initialView, setInitialView] = useState<YardCheck | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Draggable Create FAB (like iOS AssistiveTouch) - a fixed bottom-right spot
+  // always risks sitting over whatever the last list item happens to be, so
+  // instead of padding the list to dodge it, let people drag it out of the way
+  // and remember where they left it.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [fabPos, setFabPos] = useState<{ right: number; bottom: number }>({ right: 16, bottom: 20 });
+  const [isDraggingFab, setIsDraggingFab] = useState(false);
+  const fabDragRef = useRef<{ startX: number; startY: number; startRight: number; startBottom: number; moved: boolean } | null>(null);
+  // A completed drag ends with a pointerup, which the browser follows with a
+  // compatibility click on touch devices - without this flag that click would
+  // immediately open Create right after a drag, and on some touch sequences
+  // land on the freshly-opened modal's backdrop and close it in the same beat.
+  const fabJustDraggedRef = useRef(false);
+
+  const clampFabPos = useCallback((right: number, bottom: number) => {
+    const container = containerRef.current;
+    const fabSize = 56;
+    if (!container) return { right, bottom };
+    const maxRight = Math.max(0, container.clientWidth - fabSize);
+    const maxBottom = Math.max(0, container.clientHeight - fabSize);
+    return { right: Math.min(Math.max(right, 0), maxRight), bottom: Math.min(Math.max(bottom, 0), maxBottom) };
+  }, []);
+
+  // Restore the saved spot, but clamp it immediately - a position saved on a
+  // wide screen can be well outside a narrower one.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('yc_fab_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.right === 'number' && typeof parsed.bottom === 'number') {
+          setFabPos(clampFabPos(parsed.right, parsed.bottom));
+        }
+      }
+    } catch { /* ignore invalid saved position */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-clamp whenever the container is resized (orientation change, window
+  // resize, sidebar toggling, etc.) so the FAB can never end up stranded
+  // off-screen with no way to drag it back.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      setFabPos((prev) => clampFabPos(prev.right, prev.bottom));
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [clampFabPos]);
+
+  const handleFabPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    fabDragRef.current = { startX: e.clientX, startY: e.clientY, startRight: fabPos.right, startBottom: fabPos.bottom, moved: false };
+    setIsDraggingFab(true);
+    // A new gesture starting means any stray compatibility click from the
+    // *previous* drag has already landed (or never will) - whatever click
+    // eventually comes from *this* gesture is a fresh interaction, not a
+    // leftover one, so it must never be suppressed by the old flag.
+    fabJustDraggedRef.current = false;
+  };
+
+  const handleFabPointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = fabDragRef.current;
+    if (!drag) return;
+    const deltaX = e.clientX - drag.startX;
+    const deltaY = e.clientY - drag.startY;
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) drag.moved = true;
+    setFabPos(clampFabPos(drag.startRight - deltaX, drag.startBottom - deltaY));
+  };
+
+  // Pointerup and pointercancel only ever settle drag state - they never open
+  // Create themselves. Opening happens in the real onClick handler below, so
+  // mouse, touch, keyboard (Enter/Space) and assistive activation all go
+  // through the same normal button-click path.
+  const endFabDrag = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    const drag = fabDragRef.current;
+    fabDragRef.current = null;
+    setIsDraggingFab(false);
+    if (drag?.moved) {
+      fabJustDraggedRef.current = true;
+      // The next pointerdown or keydown clears this immediately (see below),
+      // so this timeout only matters for the narrow case of switching
+      // straight from a touch drag to keyboard activation with neither of
+      // those firing first - a fallback, not the primary reset path.
+      window.setTimeout(() => { fabJustDraggedRef.current = false; }, 300);
+      setFabPos((prev) => {
+        try { localStorage.setItem('yc_fab_pos', JSON.stringify(prev)); } catch { /* ignore */ }
+        return prev;
+      });
+    }
+  };
+
+  const handleFabClick = () => {
+    if (fabJustDraggedRef.current) {
+      fabJustDraggedRef.current = false;
+      return;
+    }
+    openModal('create');
+  };
 
   const { checks, loading, refetch, markOut, deleteCheck, actionLoading } = useYardChecks({});
 
@@ -350,12 +452,10 @@ function YardCheckSummaryContent() {
           }`}>
             {statusLabel ? `${statusLabel} · ` : ''}{formatDateTimeRelative(c.checked_at)}
           </span>
-          {disp && disp !== 'passed' ? (
+          {isAuthenticated && (disp && disp !== 'passed' ? (
             <button
               onClick={() => { setInitialInspect(c); setModalMode('update'); setModalOpen(true); }}
-              disabled={!isAuthenticated}
-              title={!isAuthenticated ? t('login_readonly_hint') : undefined}
-              className={`shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`shrink-0 min-h-9 text-center text-xs px-3 py-1.5 rounded-lg text-white font-medium ${
                 hasNg ? 'bg-amber-700 hover:bg-amber-800' : 'bg-[#006cb3] hover:bg-[#00568f]'
               }`}
             >
@@ -364,20 +464,19 @@ function YardCheckSummaryContent() {
           ) : (
             <button
               onClick={() => setMarkOutCheck(c)}
-              disabled={actionLoading || !isAuthenticated}
-              title={!isAuthenticated ? t('login_readonly_hint') : undefined}
-              className="shrink-0 min-h-11 w-28 text-center text-xs px-2 py-1 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={actionLoading}
+              className="shrink-0 min-h-9 text-center text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-white font-medium disabled:opacity-50"
             >
               {t('yc_mark_out')}
             </button>
-          )}
+          ))}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="fls-yard-summary mx-auto flex max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 h-[calc(100dvh-104px)] min-h-[360px] relative">
+    <div ref={containerRef} className="fls-yard-summary mx-auto flex max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 h-[calc(100dvh-104px)] min-h-[360px] relative">
       <div className="shrink-0 border-b border-slate-200 bg-white p-3">
         <h1 className="sr-only">{t('yc_summary')}</h1>
         <div data-testid="yard-toolbar" className="space-y-2 lg:grid lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-center lg:gap-3 lg:space-y-0">
@@ -391,18 +490,50 @@ function YardCheckSummaryContent() {
           <div className="flex min-w-0 items-center gap-2">
             <SearchInput value={searchQuery} onChange={setSearchQuery} placeholder={t('search_placeholder')} ringColor="focus:ring-[#006cb3]" className="min-w-0 [&_input]:h-11" />
             <button onClick={handleCopyYardUpdate} aria-label={t('yc_copy_yard_update')} title={t('yc_copy_yard_update')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50">{copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}</button>
-            <button onClick={() => openModal('update')} disabled={!isAuthenticated} aria-label={t('yc_scan_container')} title={!isAuthenticated ? t('login_readonly_hint') : t('yc_scan_container')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"><ScanLine className="h-4 w-4" /></button>
-            <button onClick={() => openModal('create')} disabled={!isAuthenticated} aria-label={t('yc_mode_create')} title={!isAuthenticated ? t('login_readonly_hint') : t('yc_mode_create')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#006cb3] text-white hover:bg-[#00568f] disabled:opacity-40 disabled:cursor-not-allowed"><Plus className="h-5 w-5" /></button>
+            {isAuthenticated && (
+              <button onClick={() => openModal('update')} aria-label={t('yc_scan_container')} title={t('yc_scan_container')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50"><ScanLine className="h-4 w-4" /></button>
+            )}
           </div>
-          <div className="grid min-w-0 grid-cols-2 gap-2">
-            <div className="flex min-w-0 rounded-lg border border-slate-200 bg-slate-100 p-0.5">
-              {(['in', 'out'] as const).map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} aria-pressed={activeTab === tab} className={`min-h-10 min-w-0 flex-1 rounded-md px-1 text-xs font-semibold ${activeTab === tab ? 'bg-[#006cb3] text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>{t(tab === 'in' ? 'yc_in_yard_section' : 'yc_out_today_section')} {tab === 'in' ? inYard.length : outList.length}</button>)}
-            </div>
-            {activeTab === 'in' ? <select aria-label={t('yc_checklist_title')} value={inStatusFilter || ''} onChange={(event) => setInStatusFilter(event.target.value as typeof inStatusFilter || null)} className="h-11 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700">
-              <option value="">{t('all')}</option><option value="passed">{t('yc_passed')} {stats.emptyPassed}</option><option value="not_passed">{t('yc_not_passed')} {stats.emptyNotPassed}</option><option value="pending">{t('yc_awaiting_inspection')} {stats.emptyPending}</option>
-            </select> : <select aria-label={t('yc_out_today_section')} value={outRange} onChange={(event) => setOutRange(event.target.value as typeof outRange)} className="h-11 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700">{(['24h', '7d', 'all'] as const).map((range) => <option key={range} value={range}>{t(`yc_range_${range}`)}</option>)}</select>}
+          <div className="flex min-w-0 rounded-lg border border-slate-200 bg-slate-100 p-0.5">
+            {(['in', 'out'] as const).map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} aria-pressed={activeTab === tab} className={`min-h-10 min-w-0 flex-1 rounded-md px-1 text-xs font-semibold ${activeTab === tab ? 'bg-[#006cb3] text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>{t(tab === 'in' ? 'yc_in_yard_section' : 'yc_out_today_section')} {tab === 'in' ? inYard.length : outList.length}</button>)}
           </div>
         </div>
+
+        {/* Quick filter pills - one tap, not a dropdown, since speed matters more here than compactness */}
+        {activeTab === 'in' ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {([
+              { key: null, label: t('all') },
+              { key: 'passed', label: `${t('yc_passed')} ${stats.emptyPassed}` },
+              { key: 'not_passed', label: `${t('yc_not_passed')} ${stats.emptyNotPassed}` },
+              { key: 'pending', label: `${t('yc_awaiting_inspection')} ${stats.emptyPending}` },
+            ] as const).map((f) => (
+              <button
+                key={f.label}
+                onClick={() => setInStatusFilter(f.key)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  inStatusFilter === f.key ? 'bg-[#006cb3] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {(['24h', '7d', 'all'] as const).map((range) => (
+              <button
+                key={range}
+                onClick={() => setOutRange(range)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  outRange === range ? 'bg-[#006cb3] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {t(`yc_range_${range}`)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* List */}
@@ -452,6 +583,26 @@ function YardCheckSummaryContent() {
           </div>
         )}
       </div>
+
+      {/* Floating create button - draggable like iOS AssistiveTouch, so it can
+          be moved off whatever it's covering instead of always sitting in a
+          fixed corner that may land on the last list item's own buttons */}
+      {isAuthenticated && (
+        <button
+          onPointerDown={handleFabPointerDown}
+          onPointerMove={handleFabPointerMove}
+          onPointerUp={endFabDrag}
+          onPointerCancel={endFabDrag}
+          onClick={handleFabClick}
+          onKeyDown={() => { fabJustDraggedRef.current = false; }}
+          style={{ right: fabPos.right, bottom: fabPos.bottom, touchAction: 'none' }}
+          aria-label={t('yc_mode_create')}
+          title={t('yc_mode_create')}
+          className={`absolute z-30 flex h-14 w-14 touch-none select-none items-center justify-center rounded-full bg-[#006cb3] text-white shadow-xl hover:bg-[#00568f] ${isDraggingFab ? 'scale-105' : ''}`}
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
 
       {/* Create/Update modal */}
       <YardCheckModal

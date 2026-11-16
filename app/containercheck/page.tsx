@@ -545,15 +545,18 @@ function ContainerCheckForm() {
             <X className="w-4 h-4" />
             {t('cc_cancel')}
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!isFormValid || loading || !isAuthenticated}
-            title={!isAuthenticated ? t('login_readonly_hint') : undefined}
-            className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <Check className="w-4 h-4" />
-            {loading ? '...' : t('cc_confirm')}
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={handleSubmit}
+              disabled={!isFormValid || loading}
+              className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:text-gray-500 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              {loading ? '...' : t('cc_confirm')}
+            </button>
+          ) : (
+            <p className="flex-1 text-center text-xs text-gray-500 self-center">{t('login_readonly_hint')}</p>
+          )}
         </div>
       </div>
 

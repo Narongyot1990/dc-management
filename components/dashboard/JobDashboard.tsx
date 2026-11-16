@@ -600,12 +600,13 @@ export function JobDashboard({ backUrl, backLabel }: JobDashboardProps) {
 
             {/* Action Buttons */}
             <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
-              {!isEditMode ? (
+              {!isAuthenticated ? (
+                <p className="flex-1 text-center text-xs text-gray-500 py-2.5">{t('login_readonly_hint')}</p>
+              ) : !isEditMode ? (
                 <>
                   <button
                     onClick={() => setIsEditMode(true)}
-                    disabled={isSubmitting || !isAuthenticated}
-                    title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+                    disabled={isSubmitting}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
                   >
                     {t('edit') || 'Edit'}
@@ -613,8 +614,7 @@ export function JobDashboard({ backUrl, backLabel }: JobDashboardProps) {
                   {(selectedJob.status === 'pending') && (
                     <button
                       onClick={() => handleCancelJob(selectedJob)}
-                      disabled={isSubmitting || !isAuthenticated}
-                      title={!isAuthenticated ? t('login_readonly_hint') : undefined}
+                      disabled={isSubmitting}
                       className="flex-1 bg-gray-700 hover:bg-gray-800 disabled:bg-gray-300 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
                     >
                       <X className="w-4 h-4" />

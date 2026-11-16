@@ -5,8 +5,7 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 import { LoginModal } from './LoginModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, Home, LogOut } from 'lucide-react';
-import Link from 'next/link';
+import { User, LogOut } from 'lucide-react';
 
 export function Header() {
   const { t } = useLanguage();
@@ -22,7 +21,7 @@ export function Header() {
 
   return (
     <header className="fls-yard-header bg-white border-b border-[var(--border)] px-4 md:px-6 py-3 flex items-center justify-between gap-2 shadow-[var(--shadow)]">
-      <Link href="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
         <span
           role="img"
           aria-label="FLS Transport"
@@ -33,30 +32,26 @@ export function Header() {
           <strong className="block text-sm font-semibold text-[#006cb3] truncate">FLS Transport</strong>
           <span className="block text-[11px] text-slate-500 truncate">{t('app_title')}</span>
         </span>
-      </Link>
+      </div>
 
-      <div className="flex items-center gap-1.5 md:gap-3">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 hover:bg-[var(--muted-bg)] px-2.5 py-2 rounded-lg transition-colors"
-        >
-          <Home className="w-4 h-4 md:w-5 md:h-5 text-[var(--text-secondary)]" strokeWidth={1.75} />
-        </Link>
-
+      <div className="flex items-center gap-2 md:gap-3">
         <LanguageSwitcher />
 
         {user ? (
-          <button
-            onClick={handleLogout}
-            title={t('login_logout')}
-            className="flex items-center gap-1.5 hover:bg-[var(--muted-bg)] px-2.5 py-2 rounded-lg transition-colors"
-          >
-            <User className="w-4 h-4 md:w-5 md:h-5 text-[var(--text-secondary)]" strokeWidth={1.75} />
-            <span className="text-xs md:text-sm font-medium text-[var(--text-secondary)] hidden sm:inline">
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--muted-bg)] text-xs md:text-sm font-medium text-[var(--text-secondary)]">
+              <User className="w-4 h-4" strokeWidth={1.75} />
               {user.username}
             </span>
-            <LogOut className="w-3.5 h-3.5 text-[var(--text-secondary)]" strokeWidth={1.75} />
-          </button>
+            <button
+              onClick={handleLogout}
+              title={t('login_logout')}
+              className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--muted-bg)] text-xs md:text-sm font-medium text-[var(--text-secondary)] transition-colors"
+            >
+              <LogOut className="w-4 h-4" strokeWidth={1.75} />
+              <span className="hidden md:inline">{t('login_logout')}</span>
+            </button>
+          </div>
         ) : (
           <button
             onClick={() => setLoginOpen(true)}

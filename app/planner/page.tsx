@@ -780,29 +780,31 @@ export default function PlannerPage() {
 
             {/* Submit Button */}
             <div className="pt-4">
-              <button
-                onClick={handleSubmit}
-                disabled={
-                  loading ||
-                  !isAuthenticated ||
-                  (selectedJobType === 'in' && (!formData.container_no || !formData.dock_to)) ||
-                  (selectedJobType === 'out' && (!formData.container_no || !formData.dock_from))
-                }
-                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-3 rounded-lg transition-colors text-sm md:text-base flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    {t('confirm')}
-                  </>
-                )}
-              </button>
+              {isAuthenticated ? (
+                <button
+                  onClick={handleSubmit}
+                  disabled={
+                    loading ||
+                    (selectedJobType === 'in' && (!formData.container_no || !formData.dock_to)) ||
+                    (selectedJobType === 'out' && (!formData.container_no || !formData.dock_from))
+                  }
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium py-3 rounded-lg transition-colors text-sm md:text-base flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-5 h-5" />
+                      {t('confirm')}
+                    </>
+                  )}
+                </button>
+              ) : (
+                <p className="text-center text-xs text-gray-500">{t('login_readonly_hint')}</p>
+              )}
             </div>
           </div>
         </div>
@@ -846,15 +848,16 @@ export default function PlannerPage() {
             </p>
 
             <div className="flex gap-3">
-              <button
-                onClick={handleMoveOut}
-                disabled={loading || !isAuthenticated}
-                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <ArrowUpFromLine className="w-4 h-4" />
-                {t('move_out') || 'Move Out'}
-              </button>
+              {isAuthenticated && (
+                <button
+                  onClick={handleMoveOut}
+                  disabled={loading}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <ArrowUpFromLine className="w-4 h-4" />
+                  {t('move_out') || 'Move Out'}
+                </button>
+              )}
               <button
                 onClick={handleClean}
                 disabled={loading}

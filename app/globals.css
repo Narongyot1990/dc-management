@@ -115,11 +115,14 @@ body {
     padding-inline: 12px;
   }
   .fls-yard-header > div {
-    gap: 0;
+    gap: 6px;
   }
   .fls-yard-header > div > a,
   .fls-yard-header > div > button {
     padding-inline: 6px;
+  }
+  .fls-yard-header > div > div {
+    gap: 6px;
   }
   .fls-yard-header > div > div > button {
     gap: 4px;

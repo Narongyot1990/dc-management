@@ -348,26 +348,26 @@ export default function DriverPage() {
               </div>
             )}
 
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => handleComplete(displayJob)}
-                disabled={!isAuthenticated}
-                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                {t('job_done')}
-              </button>
-              <button
-                onClick={() => handleReportIssue(displayJob)}
-                disabled={!isAuthenticated}
-                title={!isAuthenticated ? t('login_readonly_hint') : undefined}
-                className="flex-1 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
-              >
-                <AlertTriangle className="w-5 h-5" />
-                {t('report_issue')}
-              </button>
-            </div>
+            {isAuthenticated ? (
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => handleComplete(displayJob)}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="w-5 h-5" />
+                  {t('job_done')}
+                </button>
+                <button
+                  onClick={() => handleReportIssue(displayJob)}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 px-4 rounded-xl transition-colors text-base md:text-lg flex items-center justify-center gap-2"
+                >
+                  <AlertTriangle className="w-5 h-5" />
+                  {t('report_issue')}
+                </button>
+              </div>
+            ) : (
+              <p className="text-center text-xs text-gray-500 mt-4">{t('login_readonly_hint')}</p>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-[var(--border)] p-5 md:p-6 shadow-sm text-sm md:text-base text-gray-500">
