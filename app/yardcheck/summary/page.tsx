@@ -46,11 +46,15 @@ function buildYardUpdateReport(checks: YardCheck[]): string {
   const ladenList = byType('laden');
   const chassisList = byType('chassis');
 
-  const elapsedHours = (checkedAt: string | Date) =>
-    Math.max(0, Math.floor((now.getTime() - new Date(checkedAt).getTime()) / 3600000));
+  const elapsedHm = (checkedAt: string | Date) => {
+    const totalMinutes = Math.max(0, Math.floor((now.getTime() - new Date(checkedAt).getTime()) / 60000));
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}h, ${m}m`;
+  };
 
   const containerLine = (c: YardCheck) =>
-    `${c.container_no} | ${c.size} | IN ${formatDateTime(c.checked_at)} (${elapsedHours(c.checked_at)}h)`;
+    `${c.container_no} | ${c.size} | IN ${formatDateTime(c.checked_at)} (${elapsedHm(c.checked_at)})`;
 
   const lines: string[] = [
     `FLS YARD UPDATE | ${formatDate(now)} ${formatTime(now)}`,

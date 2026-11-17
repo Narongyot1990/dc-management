@@ -7,6 +7,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type { YardCheck, YardCheckType, YardCheckSize } from '@/types';
 import { ContainerScanner } from '@/components/scanner/ContainerScanner';
+import { SearchInput } from '@/components/ui';
 import { PlateIcon } from '@/components/yardcheck/PlateIcon';
 import { getYardCardTypeBadgeClass, getYardCardSizeBadgeClass, getYardCardTypeBorderClass, YARD_CARD_CONTAINER_NO_CLASS } from '@/utils/styles';
 import { YARD_SIZES, YARD_NAME } from '@/utils/constants';
@@ -53,6 +54,7 @@ export default function InventoryCheckPage() {
   const [submitting, setSubmitting] = useState(false);
   const [inYardList, setInYardList] = useState<YardCheck[]>([]);
   const [typeFilter, setTypeFilter] = useState<YardCheckType | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [stillHere, setStillHere] = useState<Set<string>>(new Set());
   const [newAssets, setNewAssets] = useState<NewAssetDraft[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -171,7 +173,20 @@ export default function InventoryCheckPage() {
     }
   };
 
-  const visibleList = typeFilter ? inYardList.filter((c) => c.type === typeFilter) : inYardList;
+  const typeCounts = {
+    empty: inYardList.filter((c) => c.type === 'empty').length,
+    laden: inYardList.filter((c) => c.type === 'laden').length,
+    chassis: inYardList.filter((c) => c.type === 'chassis').length,
+  };
+
+  const visibleList = inYardList.filter((c) => {
+    if (typeFilter && c.type !== typeFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!c.chassis_plate?.toLowerCase().includes(q) && !c.container_no?.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
   const markOutCount = inYardList.length - stillHere.size;
 
   if (!authLoading && !isAuthenticated) {
@@ -215,15 +230,25 @@ export default function InventoryCheckPage() {
         )}
 
         {step === 'list' && (
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={t('search_placeholder')}
+            ringColor="focus:ring-[#006cb3]"
+            className="mt-2.5"
+          />
+        )}
+
+        {step === 'list' && (
           // Single-select, unlike Summary's multi-select pills - deliberately
           // different here since walking the yard means focusing on one type
           // at a time, not combining several.
-          <div className="flex flex-wrap gap-1.5 mt-2.5">
+          <div className="flex flex-wrap gap-1.5 mt-2">
             {([
-              { key: null, label: t('all') },
-              { key: 'empty', label: t('yc_type_empty') },
-              { key: 'laden', label: t('yc_type_laden') },
-              { key: 'chassis', label: t('yc_type_chassis') },
+              { key: null, label: t('all'), count: inYardList.length },
+              { key: 'empty', label: t('yc_type_empty'), count: typeCounts.empty },
+              { key: 'laden', label: t('yc_type_laden'), count: typeCounts.laden },
+              { key: 'chassis', label: t('yc_type_chassis'), count: typeCounts.chassis },
             ] as const).map((f) => (
               <button
                 key={f.label}
@@ -232,7 +257,7 @@ export default function InventoryCheckPage() {
                   typeFilter === f.key ? 'bg-[#006cb3] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                {f.label}
+                {f.label} ({f.count})
               </button>
             ))}
           </div>
