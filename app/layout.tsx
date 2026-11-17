@@ -5,7 +5,7 @@ import { Header } from "@/components/shared/Header";
 
 const shareTitle = "FLS Transport | Yard Management";
 const shareDescription = "Yard management, container inspections, and yard entry and exit tracking by FLS Transport.";
-const shareImage = "/brand/fls-yard-preview-v1.png";
+const shareImage = "/brand/fls-logo-square-v3.png";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://yard-management-blond.vercel.app"),
@@ -21,13 +21,13 @@ export const metadata: Metadata = {
     images: [{
       url: shareImage,
       width: 1200,
-      height: 630,
+      height: 1200,
       type: "image/png",
-      alt: "FLS Transport | Yard Management",
+      alt: "FLS Group logo",
     }],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: shareTitle,
     description: shareDescription,
     images: [shareImage],
