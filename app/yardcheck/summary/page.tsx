@@ -46,15 +46,25 @@ function buildYardUpdateReport(checks: YardCheck[]): string {
   const ladenList = byType('laden');
   const chassisList = byType('chassis');
 
-  const elapsedHm = (checkedAt: string | Date) => {
-    const totalMinutes = Math.max(0, Math.floor((now.getTime() - new Date(checkedAt).getTime()) / 60000));
+  const elapsedHm = (at: string | Date) => {
+    const totalMinutes = Math.max(0, Math.floor((now.getTime() - new Date(at).getTime()) / 60000));
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
     return `${h}h, ${m}m`;
   };
 
-  const containerLine = (c: YardCheck) =>
-    `${c.container_no} | ${c.size} | IN ${formatDateTime(c.checked_at)} (${elapsedHm(c.checked_at)})`;
+  const emptyStatusLabel = (c: YardCheck) => {
+    const status = getYardEmptyDisplayStatus(c);
+    if (status === 'passed') return 'PASSED';
+    if (status === 'failed') return 'NOT PASSED';
+    return 'PENDING';
+  };
+
+  const containerLine = (c: YardCheck) => {
+    const at = c.checked_at;
+    const statusPart = c.type === 'empty' ? ` | ${emptyStatusLabel(c)}` : '';
+    return `${c.container_no} | ${c.size}${statusPart} | IN ${formatDateTime(at)} (${elapsedHm(at)})`;
+  };
 
   const lines: string[] = [
     `FLS YARD UPDATE | ${formatDate(now)} ${formatTime(now)}`,
