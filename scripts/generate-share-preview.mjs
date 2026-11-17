@@ -3,9 +3,8 @@ import sharp from 'sharp';
 import { fileURLToPath } from 'node:url';
 
 const root = new URL('../', import.meta.url);
-// Preserve the full FLS Group logo and its proportions on a square white canvas.
-// Source: https://fls-group.com/wp-content/themes/flsgroup/images/fls-logo-tagline-blue.webp
-const logo = await sharp(fileURLToPath(new URL('public/brand/fls-group-logo.webp', root)))
+// Preserve the supplied FLS Transport logo and tagline on a square white canvas.
+const logo = await sharp(fileURLToPath(new URL('public/brand/fls-transport-logo-with-tagline.png', root)))
   .resize({ width: 1024 })
   .png()
   .toBuffer();
@@ -20,5 +19,5 @@ await sharp({
 })
   .composite([{ input: logo, gravity: 'centre' }])
   .png()
-  .toFile(fileURLToPath(new URL('public/brand/fls-logo-square-v3.png', root)));
-console.log('Generated public/brand/fls-logo-square-v3.png (1200 x 1200)');
+  .toFile(fileURLToPath(new URL('public/brand/fls-transport-square-v4.png', root)));
+console.log('Generated public/brand/fls-transport-square-v4.png (1200 x 1200)');
