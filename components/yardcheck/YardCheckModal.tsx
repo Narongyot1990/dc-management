@@ -21,6 +21,16 @@ import {
   Clock,
 } from 'lucide-react';
 
+// Latest history entry timestamp for a given action, e.g. when a record was
+// actually marked OUT or last inspected - `checked_at` is only the original
+// check-in time and `updated_at` isn't a real persisted field, so both
+// "Inspected at" and "Departed at" would otherwise show the same moment.
+function lastHistoryAt(record: YardCheck, action: 'inspect' | 'out'): string | Date {
+  const matches = (record.history || []).filter((h) => h.action === action);
+  if (matches.length === 0) return record.checked_at;
+  return matches.reduce((latest, h) => (new Date(h.at).getTime() > new Date(latest).getTime() ? h.at : latest), matches[0].at);
+}
+
 // Shrinks a photo client-side before it's uploaded to Vercel Blob, so a raw
 // phone-camera photo (several MB) doesn't get uploaded as-is.
 async function resizeImageToBlob(file: File, maxDim = 1000, quality = 0.7): Promise<Blob> {
@@ -454,9 +464,9 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                 </p>
                 {viewOnly && (
                   <p className="text-[11px] text-gray-400 mt-0.5 ml-7">
-                    {t('yc_inspected_at')}: {formatDateTimeRelative(inspecting.checked_at)}
+                    {t('yc_inspected_at')}: {formatDateTimeRelative(lastHistoryAt(inspecting, 'inspect'))}
                     {inspecting.yard_status === 'out' && (
-                      <> · {t('yc_departed_at')}: {formatDateTimeRelative(inspecting.updated_at || inspecting.checked_at)}</>
+                      <> · {t('yc_departed_at')}: {formatDateTimeRelative(lastHistoryAt(inspecting, 'out'))}</>
                     )}
                   </p>
                 )}

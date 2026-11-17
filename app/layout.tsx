@@ -3,9 +3,35 @@ import "./globals.css";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { Header } from "@/components/shared/Header";
 
+const shareTitle = "FLS Transport | Yard Management";
+const shareDescription = "Yard management, container inspections, and yard entry and exit tracking by FLS Transport.";
+const shareImage = "/brand/fls-yard-preview-v1.png";
+
 export const metadata: Metadata = {
-  title: "Dock Management System",
-  description: "Container dock management system",
+  metadataBase: new URL("https://yard-management-blond.vercel.app"),
+  title: shareTitle,
+  description: shareDescription,
+  applicationName: "FLS Yard Management",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "FLS Transport",
+    title: shareTitle,
+    description: shareDescription,
+    images: [{
+      url: shareImage,
+      width: 1200,
+      height: 630,
+      type: "image/png",
+      alt: "FLS Transport | Yard Management",
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: shareTitle,
+    description: shareDescription,
+    images: [shareImage],
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
