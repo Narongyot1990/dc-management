@@ -821,7 +821,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                             type === ty
                               ? ty === 'empty' ? 'bg-[#006cb3] text-white border-[#006cb3]'
                               : ty === 'laden' ? 'bg-blue-500 text-white border-blue-500'
-                              : 'bg-teal-600 text-white border-teal-600'
+                              : 'bg-violet-600 text-white border-violet-600'
                               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                           }`}
                         >

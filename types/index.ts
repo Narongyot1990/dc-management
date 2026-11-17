@@ -127,7 +127,7 @@ export interface YardCheckChecklistItem {
 }
 
 export interface YardCheckHistory {
-  action: 'create' | 'update' | 'out' | 'inspect';
+  action: 'create' | 'update' | 'out' | 'inspect' | 'verify';
   at: string | Date;
   changes?: string;
 }

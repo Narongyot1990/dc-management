@@ -8,12 +8,14 @@ import { useState, useRef, useMemo, useCallback, useEffect, Suspense, type Point
 import { useSearchParams } from 'next/navigation';
 import type { YardCheck, YardCheckType } from '@/types';
 import { formatDateTimeRelative, formatDate, formatTime, formatDateTime } from '@/utils/format';
-import { getYardEmptyDisplayStatus } from '@/utils/styles';
+import { getYardEmptyDisplayStatus, getYardCardTypeBadgeClass, getYardCardSizeBadgeClass, YARD_CARD_CONTAINER_NO_CLASS } from '@/utils/styles';
 import { YARD_NAME } from '@/utils/constants';
 import { useYardChecks } from '@/hooks';
 import { useYardCheckEvents } from '@/hooks/usePusher';
 import { SearchInput, BottomSheet } from '@/components/ui';
 import { YardCheckModal, type YardCheckModalMode } from '@/components/yardcheck/YardCheckModal';
+import { PlateIcon } from '@/components/yardcheck/PlateIcon';
+import Link from 'next/link';
 import {
   MoreVertical,
   Trash2,
@@ -23,6 +25,7 @@ import {
   ScanLine,
   Copy,
   Check,
+  ClipboardCheck,
 } from 'lucide-react';
 
 // Builds the plain-text "yard update" report pasted into LINE: assets
@@ -65,18 +68,6 @@ function buildYardUpdateReport(checks: YardCheck[]): string {
   ];
 
   return lines.join('\n');
-}
-
-// Lucide has no "license plate" glyph — a small plate-shaped rect reads clearer
-// than the Truck icon, which people mistake for "this is a tractor unit" rather
-// than the chassis's own registration number.
-function PlateIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <rect x="2" y="6" width="20" height="12" rx="2" />
-      <line x1="6" y1="14" x2="18" y2="14" />
-    </svg>
-  );
 }
 
 export default function YardCheckSummaryPage() {
@@ -369,20 +360,6 @@ function YardCheckSummaryContent() {
     }
   };
 
-  const getTypeBadgeClass = (type: YardCheckType) => {
-    if (type === 'empty') return 'bg-blue-50 text-[#006cb3]';
-    if (type === 'laden') return 'bg-emerald-50 text-emerald-800';
-    return 'bg-teal-50 text-teal-800';
-  };
-
-  // Size badge follows the record's type color; container no. always uses one
-  // consistent accent so it reads as "the same kind of field" across every row.
-  const getSizeBadgeClass = (type: YardCheckType) => {
-    if (type === 'empty') return 'bg-blue-50 text-[#006cb3]';
-    if (type === 'laden') return 'bg-emerald-50 text-emerald-700';
-    return 'bg-teal-50 text-teal-700';
-  };
-  const CONTAINER_NO_CLASS = 'text-[#006cb3]';
 
   const getCardBorder = (c: YardCheck) => {
     if (c.type === 'empty') {
@@ -390,7 +367,7 @@ function YardCheckSummaryContent() {
       return disp === 'passed' ? 'border-l-emerald-500' : disp === 'failed' ? 'border-l-red-500' : 'border-l-amber-400';
     }
     if (c.type === 'laden') return 'border-l-emerald-500';
-    return 'border-l-teal-500';
+    return 'border-l-violet-500';
   };
 
   const renderInYardCard = (c: YardCheck) => {
@@ -403,16 +380,16 @@ function YardCheckSummaryContent() {
         {/* Row 1: type + id + size + chassis + menu */}
         <div className="flex items-center justify-between gap-2 px-3 pt-2">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0 flex-1">
-            <span className={`text-[11px] font-semibold tracking-wide px-1.5 py-0.5 rounded shrink-0 ${getTypeBadgeClass(c.type)}`}>
+            <span className={`text-[11px] font-semibold tracking-wide px-1.5 py-0.5 rounded shrink-0 ${getYardCardTypeBadgeClass(c.type)}`}>
               {t(`yc_type_${c.type}`).toUpperCase()}
             </span>
             <span className="font-mono text-sm font-semibold text-gray-900 flex items-center gap-1 w-[94px] shrink-0">
               <PlateIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <span className="tabular-nums truncate">{c.chassis_plate}</span>
             </span>
-            {c.size && <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getSizeBadgeClass(c.type)}`}>{c.size}</span>}
+            {c.size && <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getYardCardSizeBadgeClass(c.type)}`}>{c.size}</span>}
             {c.container_no && (
-              <span className={`text-xs font-medium break-all ${CONTAINER_NO_CLASS}`}>{c.container_no}</span>
+              <span className={`text-xs font-medium break-all ${YARD_CARD_CONTAINER_NO_CLASS}`}>{c.container_no}</span>
             )}
             {c.type === 'chassis' && <span className="text-[10px] text-gray-400">{t('yc_no_container')}</span>}
             {c.yard_status === 'out' && (
@@ -493,6 +470,9 @@ function YardCheckSummaryContent() {
             {isAuthenticated && (
               <button onClick={() => openModal('update')} aria-label={t('yc_scan_container')} title={t('yc_scan_container')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50"><ScanLine className="h-4 w-4" /></button>
             )}
+            {isAuthenticated && (
+              <Link href="/yardcheck/inventory-check" aria-label={t('yc_inv_title')} title={t('yc_inv_title')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-[#006cb3] hover:bg-blue-50"><ClipboardCheck className="h-4 w-4" /></Link>
+            )}
           </div>
           <div className="flex min-w-0 rounded-lg border border-slate-200 bg-slate-100 p-0.5">
             {(['in', 'out'] as const).map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} aria-pressed={activeTab === tab} className={`min-h-10 min-w-0 flex-1 rounded-md px-1 text-xs font-semibold ${activeTab === tab ? 'bg-[#006cb3] text-white shadow-sm' : 'text-slate-600 hover:bg-white'}`}>{t(tab === 'in' ? 'yc_in_yard_section' : 'yc_out_today_section')} {tab === 'in' ? inYard.length : outList.length}</button>)}
@@ -567,14 +547,14 @@ function YardCheckSummaryContent() {
                   onClick={canView ? () => openViewModal(c) : undefined}
                   className={`w-full flex flex-wrap items-center gap-2 px-3 py-3 text-xs text-left ${canView ? 'hover:bg-gray-100' : ''}`}
                 >
-                  <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getTypeBadgeClass(c.type)}`}>
+                  <span className={`text-[9px] px-1 py-0.5 rounded font-semibold shrink-0 w-14 text-center ${getYardCardTypeBadgeClass(c.type)}`}>
                     {t(`yc_type_${c.type}`)}
                   </span>
                   <span className="font-mono font-medium text-gray-700 flex items-center gap-1 w-[94px] shrink-0">
                     <PlateIcon className="w-3 h-3 text-gray-400 shrink-0" />
                     <span className="tabular-nums truncate">{c.chassis_plate}</span>
                   </span>
-                  <span className={`min-w-24 flex-1 break-all font-mono font-medium ${CONTAINER_NO_CLASS}`}>{c.container_no || ''}</span>
+                  <span className={`min-w-24 flex-1 break-all font-mono font-medium ${YARD_CARD_CONTAINER_NO_CLASS}`}>{c.container_no || ''}</span>
                   <span className="text-gray-400 shrink-0">{c.size || '—'}</span>
                   <span className="text-gray-400 shrink-0 text-right">{formatDateTimeRelative(c.updated_at || c.checked_at)}</span>
                 </Row>

@@ -3,7 +3,7 @@
 // =============================================
 
 import { STATUS_COLORS, BADGE_COLORS, VENDOR_COLORS, CC_STATUS_COLORS, YARD_TYPE_COLORS, YARD_STATUS_COLORS, YARD_INSPECTION_COLORS } from './constants';
-import type { BookingStatus, JobStatus, YardCheck } from '@/types';
+import type { BookingStatus, JobStatus, YardCheck, YardCheckType } from '@/types';
 
 /**
  * Get border color class for booking status
@@ -80,6 +80,35 @@ export function getYardEmptyDisplayStatus(c: YardCheck): 'created' | 'passed' | 
   if (c.inspection_status === 'passed') return 'passed';
   return 'created';
 }
+
+/**
+ * Shared card badge colors for the FLS-themed yard check screens (Summary,
+ * Inventory Check, ...) - kept in one place so every list that shows a yard
+ * record renders the same type/size badge colors instead of drifting.
+ */
+export function getYardCardTypeBadgeClass(type: YardCheckType): string {
+  if (type === 'empty') return 'bg-blue-100 text-[#004d80]';
+  if (type === 'laden') return 'bg-emerald-100 text-emerald-800';
+  return 'bg-violet-100 text-violet-800';
+}
+
+export function getYardCardSizeBadgeClass(type: YardCheckType): string {
+  if (type === 'empty') return 'bg-blue-100 text-[#004d80]';
+  if (type === 'laden') return 'bg-emerald-100 text-emerald-700';
+  return 'bg-violet-100 text-violet-700';
+}
+
+/** Left-border accent by type - a pale badge alone isn't distinct enough at
+ * a glance, so every row also gets a type-colored stripe down its edge. */
+export function getYardCardTypeBorderClass(type: YardCheckType): string {
+  if (type === 'empty') return 'border-l-blue-500';
+  if (type === 'laden') return 'border-l-emerald-500';
+  return 'border-l-violet-500';
+}
+
+/** Container number always uses one consistent accent across every row, so
+ * it reads as "the same kind of field" regardless of the record's type. */
+export const YARD_CARD_CONTAINER_NO_CLASS = 'text-[#006cb3]';
 
 /**
  * Combine class names (simple cn utility)

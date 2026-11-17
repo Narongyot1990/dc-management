@@ -21,7 +21,7 @@ export interface IYardCheck {
   updated_at?: Date;
   remark?: string;
   history?: Array<{
-    action: 'create' | 'update' | 'out' | 'inspect';
+    action: 'create' | 'update' | 'out' | 'inspect' | 'verify';
     at: Date;
     changes?: string;
   }>;
@@ -64,7 +64,7 @@ const YardCheckSchema = new Schema<IYardCheck>({
   checked_by: { type: String, required: true },
   remark: { type: String },
   history: [{
-    action: { type: String, enum: ['create', 'update', 'out', 'inspect'], required: true },
+    action: { type: String, enum: ['create', 'update', 'out', 'inspect', 'verify'], required: true },
     at: { type: Date, default: Date.now },
     changes: { type: String },
   }],
