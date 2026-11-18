@@ -66,6 +66,11 @@ function buildYardUpdateReport(checks: YardCheck[]): string {
     return `${c.container_no} | ${c.size}${statusPart} | IN ${formatDateTime(at)} (${elapsedHm(at)})`;
   };
 
+  const chassisLine = (c: YardCheck) => {
+    const at = c.checked_at;
+    return `${c.chassis_plate} | IN ${formatDateTime(at)} (${elapsedHm(at)})`;
+  };
+
   const lines: string[] = [
     `FLS YARD UPDATE | ${formatDate(now)} ${formatTime(now)}`,
     `Yard: ${YARD_NAME}`,
@@ -78,7 +83,7 @@ function buildYardUpdateReport(checks: YardCheck[]): string {
     ...ladenList.map(containerLine),
     '',
     `CHASSIS (${chassisList.length})`,
-    ...chassisList.map((c) => c.chassis_plate),
+    ...chassisList.map(chassisLine),
   ];
 
   return lines.join('\n');
