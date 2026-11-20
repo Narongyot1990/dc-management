@@ -288,6 +288,7 @@
   "yc_in_yard_section": "IN",
   "yc_out_today_section": "OUT",
   "yc_items_on_site": "当前在场项数",
+  "yc_last_updated": "最后更新",
   "yc_departed_label": "已离场",
   "yc_show_more": "显示更多",
   "yc_new_record": "新建记录",

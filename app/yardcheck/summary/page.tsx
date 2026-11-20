@@ -26,6 +26,7 @@ import {
   Copy,
   Check,
   ClipboardCheck,
+  Clock3,
 } from 'lucide-react';
 
 // Builds the plain-text "yard update" report pasted into LINE: assets
@@ -222,6 +223,18 @@ function YardCheckSummaryContent() {
   };
 
   const { checks, loading, refetch, markOut, deleteCheck, actionLoading } = useYardChecks({});
+  const lastUpdated = useMemo(() => {
+    let latest: Date | null = null;
+    for (const record of checks) {
+      for (const value of [record.checked_at, record.updated_at, ...(record.history ?? []).map(event => event.at)]) {
+        if (!value) continue;
+        const at = new Date(value);
+        if (Number.isFinite(at.getTime()) && (!latest || at > latest)) latest = at;
+      }
+    }
+    return latest;
+  }, [checks]);
+
 
   // Real-time: any create/update/mark-out/delete from any client refetches
   // this list, so a page left open stays in sync without a manual refresh.
@@ -475,6 +488,15 @@ function YardCheckSummaryContent() {
     <div ref={containerRef} className="fls-yard-summary mx-auto flex max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 h-[calc(100dvh-104px)] min-h-[360px] relative">
       <div className="shrink-0 border-b border-slate-200 bg-white p-3">
         <h1 className="sr-only">{t('yc_summary')}</h1>
+        <div className="mb-2.5 flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+          <Clock3 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-[#006cb3]" />
+          <span>{t('yc_last_updated')}</span>
+          {lastUpdated ? (
+            <time dateTime={lastUpdated.toISOString()} className="whitespace-nowrap font-semibold tabular-nums text-slate-800">
+              {formatDate(lastUpdated)} {formatTime(lastUpdated)}
+            </time>
+          ) : <span>—</span>}
+        </div>
         <div data-testid="yard-toolbar" className="space-y-2 lg:grid lg:grid-cols-[280px_minmax(0,1fr)_300px] lg:items-center lg:gap-3 lg:space-y-0">
           <div className="grid grid-cols-3 gap-2">
             {([{ type: 'empty', count: stats.emptyTotal }, { type: 'laden', count: stats.ladenTotal }, { type: 'chassis', count: stats.chassisTotal }] as const).map(({ type, count }) => (
