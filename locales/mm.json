@@ -86,6 +86,10 @@
   "select_date": "ရက်စွဲ ရွေးချယ်",
   "today_label": "ယနေ့",
 
+  "scanner_lens": "ကင်မရာမှန်ဘီလူး",
+  "scanner_lens_normal": "ပုံမှန်",
+  "scanner_lens_wide": "မြင်ကွင်းကျယ်",
+  "scanner_lens_wide_unavailable": "မြင်ကွင်းကျယ်မှန်ဘီလူး အသုံးမပြုနိုင်ပါ။ ပုံမှန်ကင်မရာကို အသုံးပြုနေပါသည်။",
   "scanner_title": "ကွန်တိန်နာ နံပါတ် စကင်",
   "scanner_open_camera": "ကင်မရာ ဖွင့်",
   "scanner_upload_image": "ဓာတ်ပုံ တင်",

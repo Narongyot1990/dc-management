@@ -86,6 +86,10 @@
   "select_date": "เลือกวันที่",
   "today_label": "วันนี้",
 
+  "scanner_lens": "เลนส์กล้อง",
+  "scanner_lens_normal": "ปกติ",
+  "scanner_lens_wide": "มุมกว้าง",
+  "scanner_lens_wide_unavailable": "เปิดเลนส์มุมกว้างไม่ได้ ระบบกลับมาใช้กล้องปกติแล้ว",
   "scanner_title": "สแกนเลขตู้ Container",
   "scanner_open_camera": "เปิดกล้อง",
   "scanner_upload_image": "อัปโหลดรูปภาพ",

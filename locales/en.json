@@ -86,6 +86,10 @@
   "select_date": "Select Date",
   "today_label": "Today",
 
+  "scanner_lens": "Camera lens",
+  "scanner_lens_normal": "Normal",
+  "scanner_lens_wide": "Wide",
+  "scanner_lens_wide_unavailable": "Wide lens unavailable. Using the normal camera.",
   "scanner_title": "Scan Container Number",
   "scanner_open_camera": "Open Camera",
   "scanner_upload_image": "Upload Image",

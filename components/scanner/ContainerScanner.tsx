@@ -11,6 +11,9 @@ import type { ContainerScanResult } from '@/types';
 // only way out is opening the page in a real browser.
 const isLineInAppBrowser = () => typeof navigator !== 'undefined' && /\bLine\//i.test(navigator.userAgent);
 
+// Camera labels come from the browser after permission is granted.
+const ultraWideLabel = /ultra[\s_-]*wide|super[\s_-]*wide|(?:^|\s)0[.,]5\s*[x×](?:\s|$)/i;
+
 interface ContainerScannerProps {
   /** Yard mode also reads size and chassis plate from the same image. */
   mode?: 'container' | 'yard';
@@ -22,6 +25,11 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
   const { t } = useLanguage();
   const [cameraState, setCameraState] = useState<'starting' | 'ready' | 'error' | 'unsupported_webview'>('starting');
   const [cameraAttempt, setCameraAttempt] = useState(0);
+  const [lens, setLens] = useState<'normal' | 'wide'>('normal');
+  const [wideDeviceId, setWideDeviceId] = useState<string | null>(null);
+  const [wideUnavailable, setWideUnavailable] = useState(false);
+  const normalDeviceRef = useRef<string | undefined>(undefined);
+  const wideDeviceRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -103,23 +111,75 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
       }
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera unavailable');
-        localStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        const getStream = (deviceId?: string) => navigator.mediaDevices.getUserMedia({
+          video: {
+            ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: 'environment' } }),
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
-        if (cancelled || !activeRef.current) {
-          localStream.getTracks().forEach((track) => track.stop());
-          return;
+
+        const openNormal = async () => {
+          try {
+            return await getStream(normalDeviceRef.current);
+          } catch (error) {
+            if (!normalDeviceRef.current || cancelled || !activeRef.current) throw error;
+            return getStream();
+          }
+        };
+
+        const showStream = async (stream: MediaStream) => {
+          localStream = stream;
+          if (cancelled || !activeRef.current) {
+            stream.getTracks().forEach((track) => track.stop());
+            return;
+          }
+          streamRef.current = stream;
+          const video = videoRef.current;
+          if (!video) throw new Error('Preview unavailable');
+          video.srcObject = stream;
+          await video.play();
+        };
+
+        const requestedWide = lens === 'wide' ? wideDeviceRef.current : null;
+        try {
+          await showStream(requestedWide ? await getStream(requestedWide) : await openNormal());
+        } catch (error) {
+          if (!requestedWide || cancelled || !activeRef.current) throw error;
+          stopCamera();
+          setWideUnavailable(true);
+          setWideDeviceId(null);
+          wideDeviceRef.current = null;
+          await showStream(await openNormal());
         }
-        streamRef.current = localStream;
-        const video = videoRef.current;
-        if (!video) throw new Error('Preview unavailable');
-        video.srcObject = localStream;
-        await video.play();
-        if (!cancelled && activeRef.current) setCameraState('ready');
+        if (cancelled || !activeRef.current) return;
+        setCameraState('ready');
+
+        if (mode === 'yard' && lens === 'normal') {
+          const track = streamRef.current?.getVideoTracks()[0];
+          const currentId = track?.getSettings().deviceId;
+          normalDeviceRef.current = currentId;
+          try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            if (cancelled || !activeRef.current) return;
+            const currentLabel = track?.label ?? '';
+            const wideId = currentId && !ultraWideLabel.test(currentLabel)
+              ? devices.find((device) => device.kind === 'videoinput' && device.deviceId &&
+                device.deviceId !== currentId && ultraWideLabel.test(device.label) &&
+                !/front|selfie|user/i.test(device.label))?.deviceId
+              : undefined;
+            wideDeviceRef.current = wideId ?? null;
+            setWideDeviceId(wideId ?? null);
+          } catch {
+            // The default camera can still be used if device enumeration fails.
+          }
+        }
       } catch {
-        localStream?.getTracks().forEach((track) => track.stop());
-        if (!cancelled && activeRef.current) setCameraState('error');
+        if (!cancelled && activeRef.current) {
+          stopCamera();
+          setCameraState('error');
+        }
       }
     };
     void openCamera();
@@ -129,7 +189,15 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
       localStream?.getTracks().forEach((track) => track.stop());
       requestRef.current?.abort();
     };
-  }, [cameraAttempt]);
+  }, [cameraAttempt, lens, mode, stopCamera]);
+
+  const switchLens = (next: 'normal' | 'wide') => {
+    if (next === lens || cameraState !== 'ready' || processingRef.current) return;
+    setError(null);
+    setWideUnavailable(false);
+    setCameraState('starting');
+    setLens(next);
+  };
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -274,7 +342,7 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
             <p className="absolute bottom-3 left-3 right-3 text-center text-sm rounded-xl bg-black/65 p-3">{t(mode === 'yard' ? 'scanner_aim_yard' : 'scanner_aim')}</p>
           </div>}
           {cameraState === 'starting' && !isProcessing && <div role="status" className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center"><Loader2 className="h-9 w-9 animate-spin text-amber-400" /><p>{t('scanner_starting')}</p><p className="text-xs text-slate-400">{t('scanner_permission_hint')}</p></div>}
-          {cameraState === 'error' && !isProcessing && <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center"><Camera className="h-12 w-12 text-slate-500" /><p className="text-sm max-w-xs text-slate-200">{t('scanner_error_camera')}</p><button type="button" onClick={() => { setCameraState('starting'); setError(null); setCameraAttempt((v) => v + 1); }} className="flex items-center gap-2 min-h-11 px-5 rounded-xl bg-white/10 hover:bg-white/20"><RefreshCw className="h-4 w-4" />{t('scanner_retry')}</button></div>}
+          {cameraState === 'error' && !isProcessing && <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center"><Camera className="h-12 w-12 text-slate-500" /><p className="text-sm max-w-xs text-slate-200">{t('scanner_error_camera')}</p><button type="button" onClick={() => { setCameraState('starting'); setError(null); setLens('normal'); setCameraAttempt((v) => v + 1); }} className="flex items-center gap-2 min-h-11 px-5 rounded-xl bg-white/10 hover:bg-white/20"><RefreshCw className="h-4 w-4" />{t('scanner_retry')}</button></div>}
           {cameraState === 'unsupported_webview' && !isProcessing && <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
             <Camera className="h-12 w-12 text-slate-500" />
             <p className="text-sm font-semibold max-w-xs text-slate-100">{t('scanner_line_unsupported_title')}</p>
@@ -289,6 +357,19 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
         </div>
         <footer className="shrink-0 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-slate-950 space-y-3 [@media(max-height:500px)]:pt-1.5 [@media(max-height:500px)]:space-y-1.5">
           {error && <div role="alert" className="flex gap-2 rounded-xl bg-red-950 p-3 text-red-100 text-sm"><AlertCircle className="h-5 w-5 shrink-0" />{error}</div>}
+          {wideDeviceId && !isProcessing && cameraState !== 'error' && (
+            <div role="group" aria-label={t('scanner_lens')} className="mx-auto grid w-48 max-w-full grid-cols-2 gap-1 rounded-full border border-white/15 bg-slate-900 p-0.5">
+              {(['normal', 'wide'] as const).map((option) => (
+                <button key={option} type="button" aria-pressed={lens === option} disabled={cameraState !== 'ready'}
+                  onClick={() => switchLens(option)}
+                  className={`min-h-11 rounded-full px-2 text-sm font-semibold leading-tight focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${lens === option ? 'bg-amber-400 text-slate-950' : 'text-slate-200 hover:bg-white/10'}`}
+                >
+                  {t(option === 'wide' ? 'scanner_lens_wide' : 'scanner_lens_normal')}
+                </button>
+              ))}
+            </div>
+          )}
+          {wideUnavailable && cameraState === 'ready' && <p role="status" className="text-center text-xs text-amber-200">{t('scanner_lens_wide_unavailable')}</p>}
           <div className="flex items-center gap-3">
             <button type="button" disabled={isProcessing} onClick={() => fileRef.current?.click()} className="flex min-h-14 w-24 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl bg-white/10 hover:bg-white/20 disabled:opacity-40 [@media(max-height:500px)]:min-h-10"><ImagePlus className="h-5 w-5" /><span className="text-[11px]">{t('scanner_gallery')}</span></button>
             <button type="button" onClick={handleCapture} disabled={cameraState !== 'ready' || isProcessing} className="flex-1 min-h-14 rounded-2xl bg-amber-400 text-slate-950 font-semibold flex gap-2 items-center justify-center hover:bg-amber-300 disabled:bg-slate-800 disabled:text-slate-500 [@media(max-height:500px)]:min-h-10">{isProcessing ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}{t('scanner_capture_scan')}</button>
