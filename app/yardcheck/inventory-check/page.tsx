@@ -11,6 +11,7 @@ import { SearchInput } from '@/components/ui';
 import { PlateIcon } from '@/components/yardcheck/PlateIcon';
 import { getYardCardTypeBadgeClass, getYardCardSizeBadgeClass, getYardCardTypeBorderClass, YARD_CARD_CONTAINER_NO_CLASS } from '@/utils/styles';
 import { YARD_SIZES, YARD_NAME } from '@/utils/constants';
+import { findYardAssetConflict, normalizeYardAssetId } from '@/utils/yardAssetIdentity';
 import { formatDateTimeRelative } from '@/utils/format';
 import {
   ClipboardCheck,
@@ -115,10 +116,15 @@ export default function InventoryCheckPage() {
     });
   };
 
+  const existingConflict = findYardAssetConflict(addForm, inYardList);
+  const draftConflict = findYardAssetConflict(addForm, newAssets);
+  const conflict = existingConflict ?? draftConflict;
+
   const handleAddFormSubmit = () => {
-    if (!addForm.chassis_plate) return;
-    if ((addForm.type === 'empty' || addForm.type === 'laden') && (!addForm.container_no || !addForm.size)) return;
-    setNewAssets((prev) => [...prev, { ...addForm, chassis_plate: addForm.chassis_plate.toUpperCase(), container_no: addForm.container_no.toUpperCase() }]);
+    if (conflict) return;
+    if (!normalizeYardAssetId(addForm.chassis_plate)) return;
+    if ((addForm.type === 'empty' || addForm.type === 'laden') && (!normalizeYardAssetId(addForm.container_no) || !addForm.size)) return;
+    setNewAssets((prev) => [...prev, { ...addForm, chassis_plate: normalizeYardAssetId(addForm.chassis_plate), container_no: normalizeYardAssetId(addForm.container_no) }]);
     setAddForm(emptyNewAsset());
     setShowAddModal(false);
   };
@@ -149,6 +155,7 @@ export default function InventoryCheckPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stillHereIds: Array.from(stillHere),
+          knownInYardIds: inYardList.map((record) => record.id),
           newAssets: newAssets.map((a) => ({
             type: a.type,
             container_no: a.type === 'chassis' ? undefined : a.container_no,
@@ -279,6 +286,7 @@ export default function InventoryCheckPage() {
                 return (
                   <button
                     key={c.id}
+                    id={`inventory-${c.id}`}
                     onClick={() => toggleStillHere(c.id)}
                     className={`w-full overflow-hidden rounded-xl border border-l-4 bg-white p-3 text-left shadow-sm transition-colors flex items-center gap-3 ${getYardCardTypeBorderClass(c.type)} ${
                       checked ? 'border-emerald-300 bg-emerald-50 ring-1 ring-emerald-300' : 'border-slate-200 hover:bg-slate-50'
@@ -416,7 +424,7 @@ export default function InventoryCheckPage() {
 
       {/* Add found asset - a real popup, not an inline form buried at the
           bottom of a potentially long list */}
-      {showAddModal && (
+      {showAddModal && !showScanner && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[150] p-4" onClick={() => setShowAddModal(false)}>
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border">
@@ -451,7 +459,7 @@ export default function InventoryCheckPage() {
                     placeholder={t('yc_container_no')}
                     className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3]"
                   />
-                  <button onClick={() => setShowScanner(true)} className="p-2 bg-[#006cb3] hover:bg-[#00568f] text-white rounded-lg shrink-0">
+                  <button type="button" aria-label={t('scanner_title')} onClick={() => setShowScanner(true)} className="p-2 bg-[#006cb3] hover:bg-[#00568f] text-white rounded-lg shrink-0">
                     <ScanLine className="w-4 h-4" />
                   </button>
                 </div>
@@ -489,11 +497,40 @@ export default function InventoryCheckPage() {
                 />
               )}
 
+              {conflict && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  <p role="status">
+                    {t(existingConflict
+                      ? conflict.key === 'container' ? 'yc_inv_duplicate_container' : 'yc_inv_duplicate_plate'
+                      : 'yc_inv_duplicate_draft')}
+                    {' '}<strong>{conflict.record.container_no || conflict.record.chassis_plate}</strong>
+                  </p>
+                  {existingConflict && (
+                    <button
+                      type="button"
+                      className="mt-1 py-1 font-semibold underline"
+                      onClick={() => {
+                        setShowAddModal(false);
+                        setTypeFilter(null);
+                        setSearchQuery('');
+                        requestAnimationFrame(() => {
+                          const row = document.getElementById(`inventory-${existingConflict.record.id}`);
+                          row?.focus({ preventScroll: true });
+                          row?.scrollIntoView({ block: 'center' });
+                        });
+                      }}
+                    >
+                      {t('yc_inv_view_existing')}
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-2 pt-1">
                 <button onClick={() => { setShowAddModal(false); setAddForm(emptyNewAsset()); }} className="flex-1 py-2 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
                   {t('cc_cancel')}
                 </button>
-                <button onClick={handleAddFormSubmit} className="flex-1 py-2 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white">
+                <button onClick={handleAddFormSubmit} disabled={Boolean(conflict)} className="flex-1 py-2 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-50">
                   {t('yc_inv_add')}
                 </button>
               </div>

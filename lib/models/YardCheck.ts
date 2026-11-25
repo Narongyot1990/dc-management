@@ -34,13 +34,13 @@ const YardCheckSchema = new Schema<IYardCheck>({
     enum: ['empty', 'laden', 'chassis'],
     required: true,
   },
-  container_no: { type: String, default: null, index: true },
+  container_no: { type: String, default: null, index: true, trim: true, uppercase: true },
   size: {
     type: String,
     enum: ['20GP', '40GP', '40HC'],
     default: null,
   },
-  chassis_plate: { type: String, required: true, index: true },
+  chassis_plate: { type: String, required: true, index: true, trim: true, uppercase: true },
   seal_no: { type: String },
   yard: { type: String, required: true, default: 'YZZ' },
   yard_status: {
@@ -69,5 +69,18 @@ const YardCheckSchema = new Schema<IYardCheck>({
     changes: { type: String },
   }],
 }, { timestamps: true });
+
+YardCheckSchema.index({ container_no: 1 }, {
+  name: 'unique_in_yard_container',
+  unique: true,
+  collation: { locale: 'en', strength: 2 },
+  partialFilterExpression: { yard_status: 'in', container_no: { $type: 'string' } },
+});
+YardCheckSchema.index({ chassis_plate: 1 }, {
+  name: 'unique_in_yard_chassis',
+  unique: true,
+  collation: { locale: 'en', strength: 2 },
+  partialFilterExpression: { yard_status: 'in' },
+});
 
 export default models.YardCheck || model<IYardCheck>('YardCheck', YardCheckSchema);
