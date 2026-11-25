@@ -11,8 +11,9 @@ import type { ContainerScanResult } from '@/types';
 // only way out is opening the page in a real browser.
 const isLineInAppBrowser = () => typeof navigator !== 'undefined' && /\bLine\//i.test(navigator.userAgent);
 
-// Camera labels come from the browser after permission is granted.
-const ultraWideLabel = /ultra[\s_-]*wide|super[\s_-]*wide|(?:^|\s)0[.,]5\s*[x×](?:\s|$)/i;
+// Device names may be localized. Plain “wide angle” is often the main lens.
+const ultraWideLabel = /(?:ultra|super)[\s_-]*wide|超広角|超广角|超廣角|초광각|อัลตราไวด์|มุมกว้างพิเศษ|ultra[\s_-]*(?:grand[\s_-]*angle|gran[\s_-]*angular)|(?:^|[^\d])0[.,][56]\s*[x×](?!\w)/i;
+const frontCameraLabel = /front|selfie|user|前置|フロント|กล้องหน้า/i;
 
 interface ContainerScannerProps {
   /** Yard mode also reads size and chassis plate from the same image. */
@@ -158,16 +159,25 @@ export function ContainerScanner({ mode = 'container', onScan, onClose }: Contai
 
         if (mode === 'yard' && lens === 'normal') {
           const track = streamRef.current?.getVideoTracks()[0];
-          const currentId = track?.getSettings().deviceId;
-          normalDeviceRef.current = currentId;
+          const settings = track?.getSettings();
+          const currentLabel = track?.label.trim() ?? '';
+          normalDeviceRef.current = settings?.deviceId;
           try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
+            const devices = (await navigator.mediaDevices.enumerateDevices())
+              .filter((device) => device.kind === 'videoinput' && device.deviceId);
             if (cancelled || !activeRef.current) return;
-            const currentLabel = track?.label ?? '';
-            const wideId = currentId && !ultraWideLabel.test(currentLabel)
-              ? devices.find((device) => device.kind === 'videoinput' && device.deviceId &&
-                device.deviceId !== currentId && ultraWideLabel.test(device.label) &&
-                !/front|selfie|user/i.test(device.label))?.deviceId
+            const matchingLabels = devices.filter((device) => device.label.trim() === currentLabel);
+            const currentId = settings?.deviceId ||
+              (currentLabel && matchingLabels.length === 1 ? matchingLabels[0].deviceId : undefined);
+            const currentDevice = devices.find((device) => device.deviceId === currentId);
+            normalDeviceRef.current = currentId;
+            const activeIsRearNormal = currentId && settings?.facingMode !== 'user' &&
+              ![currentLabel, currentDevice?.label ?? ''].some(
+                (label) => ultraWideLabel.test(label) || frontCameraLabel.test(label)
+              );
+            const wideId = activeIsRearNormal
+              ? devices.find((device) => device.deviceId !== currentId &&
+                ultraWideLabel.test(device.label) && !frontCameraLabel.test(device.label))?.deviceId
               : undefined;
             wideDeviceRef.current = wideId ?? null;
             setWideDeviceId(wideId ?? null);

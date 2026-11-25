@@ -114,11 +114,22 @@ export async function POST(request: NextRequest) {
     await triggerYardCheckEvent(check.id);
     return NextResponse.json({ success: true, data: check }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 11000) {
+      const pattern = 'keyPattern' in error ? error.keyPattern : null;
+      const duplicatePlate = (pattern && typeof pattern === 'object' && 'chassis_plate' in pattern) ||
+        error.message.includes('unique_in_yard_chassis');
+      const duplicateContainer = (pattern && typeof pattern === 'object' && 'container_no' in pattern) ||
+        error.message.includes('unique_in_yard_container');
+      if (duplicatePlate || duplicateContainer) {
+        return NextResponse.json({
+          success: false,
+          code: duplicatePlate ? 'YARD_CHASSIS_ALREADY_IN' : 'YARD_CONTAINER_ALREADY_IN',
+          error: duplicatePlate ? 'Chassis plate is already in the yard.' : 'Container is already in the yard.',
+        }, { status: 409 });
+      }
+    }
     console.error('POST /api/yard-check error:', error);
-    return NextResponse.json(
-      { success: false, error: (error as Error).message },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: 'Unable to create yard record.' }, { status: 500 });
   }
 }
 

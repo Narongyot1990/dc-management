@@ -240,6 +240,7 @@
   "yc_awaiting_inspection": "รอตรวจสอบ",
   "yc_inv_title": "ตรวจนับสต็อก",
   "yc_inv_still_here": "ยังอยู่",
+  "yc_create_save_failed": "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง",
   "yc_inv_duplicate_container": "ตู้นี้อยู่ในลานแล้ว",
   "yc_inv_duplicate_plate": "ทะเบียนแชสซีนี้มีรายการอยู่ในลานแล้ว",
   "yc_inv_duplicate_draft": "ข้อมูลซ้ำกับรายการที่เพิ่มในรอบนี้",

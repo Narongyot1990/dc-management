@@ -240,6 +240,7 @@
   "yc_awaiting_inspection": "待检查",
   "yc_inv_title": "库存盘点",
   "yc_inv_still_here": "仍在场",
+  "yc_create_save_failed": "无法保存记录，请重试。",
   "yc_inv_duplicate_container": "该集装箱已在场内。",
   "yc_inv_duplicate_plate": "该车架牌号已用于场内资产。",
   "yc_inv_duplicate_draft": "该资产与本次盘点中已添加的记录冲突。",

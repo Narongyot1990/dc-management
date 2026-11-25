@@ -102,6 +102,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   const [step, setStep] = useState<Step>('form');
   const [type, setType] = useState<YardCheckType | ''>('');
   const [formData, setFormData] = useState(initialFormData);
+  const [createError, setCreateError] = useState<'yc_inv_duplicate_plate' | 'yc_inv_duplicate_container' | 'yc_create_save_failed' | null>(null);
   const [loading, setLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -139,6 +140,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
     setStep('form');
     setType('');
     setFormData(initialFormData);
+    setCreateError(null);
     setSearchValue('');
     setLookupStatus('idle');
     setFoundRecord(null);
@@ -226,6 +228,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   const handleTypeSelect = (ty: YardCheckType) => {
     setType(ty);
     setFormData(initialFormData);
+    setCreateError(null);
   };
 
   const isCreateValid = (() => {
@@ -236,7 +239,8 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
   })();
 
   const handleCreateSubmit = async () => {
-    if (!isCreateValid) return;
+    if (!isCreateValid || loading) return;
+    setCreateError(null);
     setLoading(true);
     try {
       const body = {
@@ -265,11 +269,20 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
         }
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        switch (error.code) {
+          case 'YARD_CHASSIS_ALREADY_IN':
+            setCreateError('yc_inv_duplicate_plate');
+            break;
+          case 'YARD_CONTAINER_ALREADY_IN':
+            setCreateError('yc_inv_duplicate_container');
+            break;
+          default:
+            setCreateError('yc_create_save_failed');
+        }
       }
     } catch (error) {
       console.error(error);
-      alert('Failed to save');
+      setCreateError('yc_create_save_failed');
     } finally {
       setLoading(false);
     }
@@ -851,7 +864,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                         <input
                           type="text"
                           value={formData.container_no}
-                          onChange={(e) => setFormData({ ...formData, container_no: e.target.value.toUpperCase() })}
+                          onChange={(e) => { setFormData({ ...formData, container_no: e.target.value.toUpperCase() }); setCreateError(null); }}
                           placeholder="TCLU1234567"
                           className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                         />
@@ -891,7 +904,7 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
                       <input
                         type="text"
                         value={formData.chassis_plate}
-                        onChange={(e) => setFormData({ ...formData, chassis_plate: e.target.value.toUpperCase() })}
+                        onChange={(e) => { setFormData({ ...formData, chassis_plate: e.target.value.toUpperCase() }); setCreateError(null); }}
                         placeholder="70-1234"
                         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#006cb3] focus:border-transparent"
                       />
@@ -926,10 +939,16 @@ export function YardCheckModal({ isOpen, mode, onClose, onSaved, initialInspect,
               )}
             </div>
 
+            {mode === 'create' && createError && (
+              <p role="alert" className="mx-4 mb-3 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                {t(createError)}
+              </p>
+            )}
+
             {mode === 'create' && (
               <div className="flex gap-3 p-4 pt-3 shrink-0 border-t border-border">
                 <button
-                  onClick={() => { setType(''); setFormData(initialFormData); }}
+                  onClick={() => { setType(''); setFormData(initialFormData); setCreateError(null); }}
                   className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg text-sm flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <X className="w-4 h-4" />
